@@ -1,0 +1,23 @@
+{
+  "system": "This dataset comes from an economics and finance document knowledge-graph benchmark.",
+  "data_file": "/home/ylivm/ngdb/ngdb_benchmark/pipeline/query_gen/query/final/econ/econ_nagg_mention_in_results.json",
+  "dataset_description": "The file contains non-aggregation Cypher query results over an economics knowledge graph. Each record pairs a graph query with returned entity/event ids and supporting text snippets from source documents.",
+  "record_fields": {
+    "template_id": "Identifier of the query template instance.",
+    "template_type": "Non-aggregation query family, such as basic, concept, chain, anti, union, nested_loop, pipelined, or triadic.",
+    "query": "Cypher query executed against entity/event nodes and typed relationships.",
+    "answer": "Returned entity or event ids, often as a list of one or more natural-language ids.",
+    "query_node_ids": "Entity or event ids used as query anchors.",
+    "answer_node_ids": "Entity or event ids expected in the returned answer.",
+    "mention_in_nodes": "Source-document snippets that mention or support the queried entities, events, and relationships.",
+    "error": "Execution error information; null means the query executed successfully."
+  },
+  "judge_notes": [
+    "Use query, answer, query_node_ids, answer_node_ids, and mention_in_nodes as the primary evidence.",
+    "For non-aggregation queries, verify the returned ids directly rather than expecting count or collect fields.",
+    "When the query returns multiple columns or multiple ids, judge whether every returned answer item is supported.",
+    "Entity and event ids are often natural-language economic, financial, corporate, accounting, policy, or dated-event phrases.",
+    "mention_in_nodes may contain long document fragments; focus on whether they support the queried relationship path and returned ids.",
+    "Do not rely on outside knowledge when judging answer correctness."
+  ]
+}

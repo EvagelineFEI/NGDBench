@@ -1,0 +1,41 @@
+# LDBC SNB Business Intelligence (BI) Workload Schema
+# Neo4j relationship types are UPPER_CASE (Cypher convention).
+# Place, Organisation are used as base labels; subtypes (City, Country, Continent,
+# Company, University) are NOT stored as separate Neo4j labels in this deployment.
+
+dataset: ldbc_bi
+
+nodes:
+  - Person
+  - Forum
+  - Post
+  - Comment
+  - Tag
+  - TagClass
+  - Organisation
+  - Place
+
+triplets:
+  - {src: Place,        rel: IS_PART_OF,     dst: Place}
+  - {src: TagClass,     rel: IS_SUBCLASS_OF, dst: TagClass}
+  - {src: Tag,          rel: HAS_TYPE,       dst: TagClass}
+  - {src: Organisation, rel: IS_LOCATED_IN,  dst: Place}
+  - {src: Person,       rel: KNOWS,          dst: Person}
+  - {src: Person,       rel: IS_LOCATED_IN,  dst: Place}
+  - {src: Person,       rel: HAS_INTEREST,   dst: Tag}
+  - {src: Person,       rel: STUDY_AT,       dst: Organisation}
+  - {src: Person,       rel: WORK_AT,        dst: Organisation}
+  - {src: Person,       rel: LIKES,          dst: Post}
+  - {src: Person,       rel: LIKES,          dst: Comment}
+  - {src: Forum,        rel: HAS_MODERATOR,  dst: Person}
+  - {src: Forum,        rel: HAS_MEMBER,     dst: Person}
+  - {src: Forum,        rel: HAS_TAG,        dst: Tag}
+  - {src: Forum,        rel: CONTAINER_OF,   dst: Post}
+  - {src: Post,         rel: HAS_CREATOR,    dst: Person}
+  - {src: Post,         rel: IS_LOCATED_IN,  dst: Place}
+  - {src: Post,         rel: HAS_TAG,        dst: Tag}
+  - {src: Comment,      rel: HAS_CREATOR,    dst: Person}
+  - {src: Comment,      rel: IS_LOCATED_IN,  dst: Place}
+  - {src: Comment,      rel: REPLY_OF,       dst: Post}
+  - {src: Comment,      rel: REPLY_OF,       dst: Comment}
+  - {src: Comment,      rel: HAS_TAG,        dst: Tag}

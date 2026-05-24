@@ -6,11 +6,11 @@ from generator.query_generator import QueryGenerator
 logger = logging.getLogger(__name__)
 
 # 默认连接配置（可被命令行参数覆盖）
-DEFAULT_NEO4J_URI = "bolt://localhost:7690"
+DEFAULT_NEO4J_URI = "bolt://localhost:7689"
 DEFAULT_NEO4J_USER = "neo4j"
 DEFAULT_NEO4J_PASSWORD = "fei123456"
-DEFAULT_DATASET = "mcp"
-DEFAULT_TEMPLATE_PATH = "query_template/template_mcp1.json"
+DEFAULT_DATASET = "primekg"
+DEFAULT_TEMPLATE_PATH = "query_template/template_agg.json"
 
 
 def test_query_generator(uri: str, user: str, password: str, dataset: str, template_path: str):
@@ -46,7 +46,12 @@ def test_query_generator(uri: str, user: str, password: str, dataset: str, templ
         print(f"\n=== 开始生成查询 ===")
         output_file = f"query_results_{dataset}.json"
         # 使用实时输出，一边生成一边写入文件
-        results = generator.generate_samples(target_count=80000, max_failures_per_template=50000, realtime_output_path=output_file)
+        results = generator.generate_samples(
+            target_count=80000,
+            max_attempts_multiplier=None,
+            max_failures_per_template=50000,
+            realtime_output_path=output_file,
+        )
         
         print(f"\n=== 生成结果 ===")
         print(f"共生成 {len(results)} 个查询")

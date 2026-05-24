@@ -6,7 +6,6 @@ import json
 import random
 import re
 import time
-import signal
 import threading
 from typing import Dict, List, Any, Optional, Tuple, Set
 from dataclasses import dataclass, field
@@ -261,6 +260,192 @@ class SchemaAnalyzer:
             if prop.prop_type == PropertyType.STRING
         ]
 
+    # ─────────────────────────────────────────────────────────────────────
+    # YAML Schema Loading — authoritative triplet override
+    # ─────────────────────────────────────────────────────────────────────
+
+    # Mapping: dataset name substring → YAML filename under pipeline/query_gen/schema/
+    _DATASET_YAML_MAP = {
+        'ldbc_fin': 'ngdfin_schema.yaml',
+        'ngdfin':   'ngdfin_schema.yaml',
+        'ldbc_bi':  'ngdbi_schema.yaml',
+        'ngdbi':    'ngdbi_schema.yaml',
+        'primekg':  'ngdprime_schema.yaml',
+        'ngdprime': 'ngdprime_schema.yaml',
+    }
+
+    def load_schema_from_yaml(self, dataset: str, schema_dir: Optional[str] = None) -> bool:
+        """
+        从 YAML schema 文件加载权威三元组，过滤数据库噪声产生的非法 (src, rel, dst) 组合。
+
+        对于每个在 YAML 中定义的关系类型，只保留 YAML 中认可的 (src, rel, dst) 组合；
+        对于 YAML 未定义的关系类型（如数据集特有的扩展），保持 DB 发现的三元组不变。
+
+        Args:
+            dataset: 数据集名称（如 'ldbc_fin', 'ldbc_bi', 'primekg'）
+            schema_dir: YAML 文件所在目录；若为 None 则使用 pipeline/query_gen/schema/ 默认目录
+
+        Returns:
+            True 表示成功加载，False 表示未找到对应 YAML 文件
+        """
+        import yaml
+        from pathlib import Path
+
+        # 定位 YAML 文件
+        if schema_dir is None:
+            schema_dir = Path(__file__).parent.parent / 'schema'
+        schema_dir = Path(schema_dir)
+
+        yaml_file = None
+        # 正规化匹配：去除下划线和空格后比较，支持 'ldbcfin'/'ldbc_fin'/'ldbcFin' 等变体
+        dataset_norm = dataset.lower().replace('_', '').replace(' ', '')
+        for key, filename in self._DATASET_YAML_MAP.items():
+            key_norm = key.lower().replace('_', '').replace(' ', '')
+            if key_norm in dataset_norm or dataset_norm in key_norm:
+                yaml_file = schema_dir / filename
+                break
+
+        if yaml_file is None or not yaml_file.exists():
+            logger.warning(f"未找到数据集 '{dataset}' 对应的 YAML schema 文件，保持 DB 发现的三元组")
+            return False
+
+        logger.info(f"从 YAML schema 加载三元组约束: {yaml_file}")
+
+        try:
+            with open(yaml_file, 'r', encoding='utf-8') as f:
+                schema_data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            logger.warning(f"YAML 解析失败 ({e})，跳过三元组约束加载")
+            return False
+
+        yaml_triplets = self._parse_schema(schema_data)
+
+        if not yaml_triplets:
+            logger.warning("YAML 中未解析到任何三元组")
+            return False
+
+        # 过滤逻辑：对 YAML 中定义的 rel_type，只保留 YAML 认可的组合；其余不变
+        yaml_rel_types = {rt for _, rt, _ in yaml_triplets}
+        # 正规化映射：normalize(yaml_rel) → yaml_rel
+        # 用于处理 DB 使用复合命名（如 Forum_containerOf_Post）而 YAML 使用大写简写（如 CONTAINER_OF）的情况
+        yaml_norm_map: Dict[str, str] = {rt.lower().replace('_', ''): rt for rt in yaml_rel_types}
+
+        # 第一步：全局扫描所有 DB rel type，建立 db_rel → yaml_rel 映射
+        # 这样即使 triplet 的 src 与 rel 的前缀不一致（如 Account_Forum_containerOf_Post_Post 这类噪声），
+        # 也能通过全局扫描正确判断该 rel type 属于哪个 YAML rel type。
+        all_labels: Set[str] = set(self.labels.keys())
+        for s, _, d in self.triplets:
+            all_labels.add(s)
+            all_labels.add(d)
+
+        db_rel_to_yaml: Dict[str, str] = {}
+        all_db_rels = {rt for _, rt, _ in self.triplets}
+        for db_rel in all_db_rels:
+            if db_rel in yaml_rel_types:
+                db_rel_to_yaml[db_rel] = db_rel  # 精确匹配
+                continue
+            # 尝试剥离各种 label 前缀/后缀，提取动词部分再正规化匹配
+            found = False
+            for prefix_lbl in all_labels:
+                verb = db_rel
+                prefix = prefix_lbl + '_'
+                if verb.lower().startswith(prefix.lower()):
+                    verb = verb[len(prefix):]
+                # 先尝试仅去前缀的结果
+                verb_norm = verb.lower().replace('_', '')
+                if verb_norm in yaml_norm_map:
+                    db_rel_to_yaml[db_rel] = yaml_norm_map[verb_norm]
+                    found = True
+                    break
+                # 再尝试同时去后缀
+                for suffix_lbl in all_labels:
+                    suffix = '_' + suffix_lbl
+                    if verb.lower().endswith(suffix.lower()):
+                        verb2 = verb[:-len(suffix)]
+                        verb_norm2 = verb2.lower().replace('_', '')
+                        if verb_norm2 in yaml_norm_map:
+                            db_rel_to_yaml[db_rel] = yaml_norm_map[verb_norm2]
+                            found = True
+                            break
+                if found:
+                    break
+
+        filtered: Set[Tuple[str, str, str]] = set()
+        removed = 0
+        for triplet in self.triplets:
+            src, rt, dst = triplet
+            yaml_rel = db_rel_to_yaml.get(rt)
+            if yaml_rel is not None:
+                # 此 DB rel type 对应某个 YAML rel type：校验 (src, yaml_rel, dst) 是否合法
+                yaml_triplet = (src, yaml_rel, dst)
+                if yaml_triplet in yaml_triplets:
+                    filtered.add(triplet)  # 保留 DB 形式
+                    if yaml_rel != rt:
+                        filtered.add(yaml_triplet)  # 同时添加 YAML 形式（供模板查询使用）
+                        logger.debug(f"复合关系类型匹配: ({src})-[:{rt}]->({dst}) ≡ YAML [{yaml_rel}]")
+                else:
+                    removed += 1
+                    logger.debug(f"过滤噪声三元组: ({src})-[:{rt}]->({dst})")
+            else:
+                filtered.add(triplet)  # 保留 YAML 未涵盖的关系类型
+
+        # 同时确保 YAML 中定义的三元组都被包含（补充 DB 未发现但 schema 合法的）
+        for triplet in yaml_triplets:
+            _, rt, _ = triplet
+            if rt in self.relationships:  # 只添加 DB 中存在的关系类型
+                filtered.add(triplet)
+
+        self.triplets = filtered
+        logger.info(
+            f"三元组过滤完成: {len(self.triplets)} 个有效三元组，"
+            f"已移除 {removed} 个 DB 噪声三元组"
+        )
+        return True
+
+    @staticmethod
+    def _parse_schema(schema_data: dict) -> Set[Tuple[str, str, str]]:
+        """
+        解析统一格式的 schema YAML，提取 (src, rel, dst) 三元组列表。
+
+        统一 YAML 格式：
+            triplets:
+              - {src: SrcLabel, rel: RelType, dst: DstLabel}
+        """
+        triplets: Set[Tuple[str, str, str]] = set()
+        if not schema_data:
+            return triplets
+        for entry in schema_data.get('triplets', []):
+            if not isinstance(entry, dict):
+                continue
+            src = entry.get('src', '')
+            rel = entry.get('rel', '')
+            dst = entry.get('dst', '')
+            if src and rel and dst:
+                triplets.add((str(src), str(rel), str(dst)))
+        return triplets
+
+    @staticmethod
+    def _strip_labels_from_rel(rel_type: str, src_label: str, dst_label: str) -> str:
+        """
+        从复合命名的关系类型中剥离节点标签前缀/后缀，提取动词部分。
+
+        例如（LDBC BI 数据库存储形式）：
+            Forum_containerOf_Post, src=Forum, dst=Post
+            → 去掉前缀 "Forum_" 和后缀 "_Post" → "containerOf"
+
+        对于已经是 VERB 形式（如 KNOWS、CONTAINER_OF）的关系类型，原样返回。
+        """
+        s = rel_type
+        if src_label:
+            prefix = src_label + '_'
+            if s.lower().startswith(prefix.lower()):
+                s = s[len(prefix):]
+        if dst_label:
+            suffix = '_' + dst_label
+            if s.lower().endswith(suffix.lower()):
+                s = s[:-len(suffix)]
+        return s
+
 
 class TemplateLoader:
     """模版加载器"""
@@ -318,9 +503,13 @@ class TemplateLoader:
         logger.info(f"加载了 {len(self.templates)} 个模版")
     
     def _requires_numeric_props(self, template: str) -> bool:
-        """检查模版是否需要数值属性（包含数值比较操作符）"""
+        """检查模版是否需要数值属性（包含数值比较操作符或常见聚合函数）"""
         for op in self.NUMERIC_OPERATORS:
             if f' {op} ' in template or f'${op}' in template:
+                return True
+        upper = template.upper()
+        for needle in ('AVG(', 'SUM(', 'MIN(', 'MAX('):
+            if needle in upper:
                 return True
         return False
     
@@ -446,7 +635,13 @@ class QueryBuilder:
                 
                 # 替换模版中的参数
                 # 对于字符串值需要加引号
-                if param_name == 'VALUE' or param_name in ('VAL', 'FILTER_VAL', 'NODE_VALUE', 'START_VALUE', 'V', 'AID', 'BID', 'CID', 'ID', 'ID1', 'ID2', ):
+                if param_name == 'VALUE' or param_name in (
+                    'VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5',
+                    'VAL', 'FILTER_VAL', 'NODE_VALUE', 'START_VALUE',
+                    'Val', 'Val1', 'Val2', 'Val3', 'Val4', 'Val5',
+                    'StartVal', 'NumVal',
+                    'AID', 'BID', 'CID', 'ID', 'ID1', 'ID2',
+                ):
                     if isinstance(value, str):
                         replacement = f"'{value}'"
                     else:
@@ -479,7 +674,11 @@ class QueryBuilder:
         # 检查查询中是否使用了 concept 标签
         has_concept = False
         for param_name, value in params_used.items():
-            if (param_name.startswith('LABEL') or param_name in ('START_LABEL', 'END_LABEL', 'L1', 'L2', 'REL_NODE_LABEL')):
+            if param_name.startswith('LABEL') or param_name in (
+                'START_LABEL', 'END_LABEL', 'GROUP_LABEL', 'TARGET_LABEL', 'REL_NODE_LABEL',
+                'Label', 'Label1', 'Label2', 'Label3', 'Label4', 'Label5',
+                'StartLabel', 'EndLabel', 'GroupLabel', 'RefLabel',
+            ):
                 if value == "concept":
                     has_concept = True
                     break
@@ -563,46 +762,62 @@ class QueryBuilder:
         if prop_lower == 'id':
             return True
         return False
+
+    def _is_set_target_property_param(self, template: Template, param_name: str) -> bool:
+        """判断属性名参数是否出现在 SET 左侧，避免更新 ID 类字段。"""
+        template_str = getattr(template, 'template', '') or ''
+        if isinstance(template_str, list):
+            template_str = ' '.join(template_str)
+        pattern = rf'\bSET\b[^;]*\.\s*\${re.escape(param_name)}\s*='
+        return re.search(pattern, template_str, flags=re.IGNORECASE) is not None
     
     def _identify_node_param_groups(self, template: Template) -> List[Dict[str, str]]:
         """
         识别模板中需要从同一节点获取的参数组
-        
+
         返回参数组列表，每个组包含：
-        - label_param: 标签参数名（如 LABEL1, L1）
+        - label_param: 标签参数名（如 LABEL1, Label1）
         - prop_params: 属性参数名列表（如 [PROP1, PROP_ID1]）
-        - value_params: 值参数名列表（如 [VALUE, AID, V]）
-        
-        例如：对于模板 template.json:640-651
-        - LABEL1 -> PROP1 -> VALUE
-        - LABEL2 -> (可能有其他属性)
-        - LABEL3 -> FILTER_PROP -> FILTER_VAL
+        - value_params: 值参数名列表（如 [VALUE, AID, Val]）
+
+        参数命名约定（来自 requirement.md 的参数标准化）：
+        - 标签：Label / Label1..Label5 / GroupLabel / StartLabel / EndLabel / RefLabel
+        - 属性：Prop / Prop1 / Prop2 / BaseProp / StartProp / NumProp / GroupProp
+        - 关系：Rel / Rel1..Rel3 / RelProp
+        - 值：   Val / StartVal / NumVal
         """
         groups = []
         params = template.parameters
-        
-        # 定义参数名映射关系
-        # 格式: {label_param: [(prop_param, value_param), ...]}
-        # 例如: {"LABEL1": [("PROP1", "VALUE")], "L1": [("P", "V"), ("PROP_ID1", "AID")]}
-        
-        # 识别 LABEL1 -> PROP1 -> VALUE 模式
+
+        # 识别 LABEL1 -> PROP1 -> VALUE / VALUE1 模式
         if 'LABEL1' in params:
             prop_value_pairs = []
-            # PROP1 对应 VALUE
             if 'PROP1' in params and 'VALUE' in params:
                 prop_value_pairs.append(('PROP1', 'VALUE'))
-            # PROP2 可能对应其他值参数，这里先不处理，避免冲突
+            if 'PROP1' in params and 'VALUE1' in params:
+                prop_value_pairs.append(('PROP1', 'VALUE1'))
             if prop_value_pairs:
                 groups.append({
                     'label_param': 'LABEL1',
                     'prop_value_pairs': prop_value_pairs
                 })
-        
-        # 识别 L1 -> P -> V 模式（用于 management 模板）
-        if 'L1' in params:
+
+        # 识别 LABEL2 -> PROP2 -> VALUE2 模式
+        if 'LABEL2' in params:
             prop_value_pairs = []
-            if 'P' in params and 'V' in params:
-                prop_value_pairs.append(('P', 'V'))
+            if 'PROP2' in params and 'VALUE2' in params:
+                prop_value_pairs.append(('PROP2', 'VALUE2'))
+            if prop_value_pairs:
+                groups.append({
+                    'label_param': 'LABEL2',
+                    'prop_value_pairs': prop_value_pairs
+                })
+
+        # 识别 Label1 -> Prop -> Val 模式（用于 management 模板）
+        if 'Label1' in params:
+            prop_value_pairs = []
+            if 'Prop' in params and 'Val' in params:
+                prop_value_pairs.append(('Prop', 'Val'))
             # PROP_ID1 可能对应 AID、ID1 或批量模板中的 ID1_1（首行）
             if 'PROP_ID1' in params:
                 if 'AID' in params:
@@ -613,47 +828,54 @@ class QueryBuilder:
                     prop_value_pairs.append(('PROP_ID1', 'ID1_1'))
             if prop_value_pairs:
                 groups.append({
-                    'label_param': 'L1',
+                    'label_param': 'Label1',
                     'prop_value_pairs': prop_value_pairs
                 })
-        
+
         # 识别 LABEL -> PROP -> VALUE 模式
         if 'LABEL' in params and 'PROP' in params and 'VALUE' in params:
             groups.append({
                 'label_param': 'LABEL',
                 'prop_value_pairs': [('PROP', 'VALUE')]
             })
-        
+
+        # 识别 START_LABEL -> START_PROP -> START_VALUE 模式（用于 chain T011/T012 等）
+        if 'START_LABEL' in params and 'START_PROP' in params and 'START_VALUE' in params:
+            groups.append({
+                'label_param': 'START_LABEL',
+                'prop_value_pairs': [('START_PROP', 'START_VALUE')]
+            })
+
         # 识别 LABEL -> PROP_ID -> VALUE 模式
         if 'LABEL' in params and 'PROP_ID' in params and 'VALUE' in params:
             groups.append({
                 'label_param': 'LABEL',
                 'prop_value_pairs': [('PROP_ID', 'VALUE')]
             })
-        
+
         # 识别 GROUP_LABEL -> PROP_ID -> GID 模式
         if 'GROUP_LABEL' in params and 'PROP_ID' in params and 'GID' in params:
             groups.append({
                 'label_param': 'GROUP_LABEL',
                 'prop_value_pairs': [('PROP_ID', 'GID')]
             })
-        
-        # 识别 L -> PROP_ID -> VALUE 模式
-        if 'L' in params and 'PROP_ID' in params and 'VALUE' in params:
+
+        # 识别 Label -> PROP_ID -> VALUE 模式（Label 为描述性简写标签）
+        if 'Label' in params and 'PROP_ID' in params and 'VALUE' in params:
             groups.append({
-                'label_param': 'L',
+                'label_param': 'Label',
                 'prop_value_pairs': [('PROP_ID', 'VALUE')]
             })
-        
-        # 识别 L2 -> PROP_ID -> MID 模式
-        if 'L2' in params and 'PROP_ID' in params and 'MID' in params:
+
+        # 识别 Label2 -> PROP_ID -> MID 模式
+        if 'Label2' in params and 'PROP_ID' in params and 'MID' in params:
             groups.append({
-                'label_param': 'L2',
+                'label_param': 'Label2',
                 'prop_value_pairs': [('PROP_ID', 'MID')]
             })
-        
-        # 识别 L3 -> PROP_ID -> VALUE/CID 模式
-        if 'L3' in params and 'PROP_ID' in params:
+
+        # 识别 Label3 -> PROP_ID -> VALUE/CID 模式
+        if 'Label3' in params and 'PROP_ID' in params:
             prop_value_pairs = []
             if 'VALUE' in params:
                 prop_value_pairs.append(('PROP_ID', 'VALUE'))
@@ -661,42 +883,41 @@ class QueryBuilder:
                 prop_value_pairs.append(('PROP_ID', 'CID'))
             if prop_value_pairs:
                 groups.append({
-                    'label_param': 'L3',
+                    'label_param': 'Label3',
                     'prop_value_pairs': prop_value_pairs
                 })
-        
-        # 识别 L4 -> PROP_ID -> VALUE 模式
-        if 'L4' in params and 'PROP_ID' in params and 'VALUE' in params:
+
+        # 识别 Label4 -> PROP_ID -> VALUE 模式
+        if 'Label4' in params and 'PROP_ID' in params and 'VALUE' in params:
             groups.append({
-                'label_param': 'L4',
+                'label_param': 'Label4',
                 'prop_value_pairs': [('PROP_ID', 'VALUE')]
             })
-        
-        # 识别 RL -> PROP_ID -> VALUE 模式（关系标签）
-        if 'RL' in params and 'PROP_ID' in params and 'VALUE' in params:
+
+        # 识别 RefLabel -> PROP_ID -> VALUE 模式（关系侧标签）
+        if 'RefLabel' in params and 'PROP_ID' in params and 'VALUE' in params:
             groups.append({
-                'label_param': 'RL',
+                'label_param': 'RefLabel',
                 'prop_value_pairs': [('PROP_ID', 'VALUE')]
             })
-        
+
         # 识别 LABEL2 -> PROP_ID -> BID1 模式（用于 CREATE_4 等：批量创建每行不同目标节点）
         if 'LABEL2' in params and 'PROP_ID' in params and 'BID1' in params:
             groups.append({
                 'label_param': 'LABEL2',
                 'prop_value_pairs': [('PROP_ID', 'BID1')]
             })
-        
+
         # 识别 LABEL3 -> FILTER_PROP -> FILTER_VAL 模式
         if 'LABEL3' in params and 'FILTER_PROP' in params and 'FILTER_VAL' in params:
             groups.append({
                 'label_param': 'LABEL3',
                 'prop_value_pairs': [('FILTER_PROP', 'FILTER_VAL')]
             })
-        
-        # 识别 L2 -> PROP_ID2 -> BID/ID2/BID1/ID2_1 模式（用于 management 模板）
-        if 'L2' in params and 'PROP_ID2' in params:
+
+        # 识别 Label2 -> PROP_ID2 -> BID/ID2/BID1/ID2_1 模式（用于 management 模板）
+        if 'Label2' in params and 'PROP_ID2' in params:
             prop_value_pairs = []
-            # PROP_ID2 可能对应 BID、ID2 或批量模板中的 BID1、ID2_1（首行）
             if 'BID' in params:
                 prop_value_pairs.append(('PROP_ID2', 'BID'))
             elif 'ID2' in params:
@@ -705,65 +926,59 @@ class QueryBuilder:
                 prop_value_pairs.append(('PROP_ID2', 'BID1'))
             elif 'ID2_1' in params:
                 prop_value_pairs.append(('PROP_ID2', 'ID2_1'))
-            # 注意：PROP_ID2 也可能与 IDS 列表一起使用（用于 WHERE ... IN $IDS），
-            # 但这种情况不需要从节点采样值，因为 IDS 是列表类型
             if prop_value_pairs:
                 groups.append({
-                    'label_param': 'L2',
+                    'label_param': 'Label2',
                     'prop_value_pairs': prop_value_pairs
                 })
-        
+
         # 识别 TARGET_LABEL -> TARGET_PROP_ID -> TARGET_ID 模式（用于 management/MIX 模板）
         if 'TARGET_LABEL' in params and 'TARGET_PROP_ID' in params and 'TARGET_ID' in params:
             groups.append({
                 'label_param': 'TARGET_LABEL',
                 'prop_value_pairs': [('TARGET_PROP_ID', 'TARGET_ID')]
             })
-        
-        # 识别 L1 -> TARGET_PROP_ID1 -> TARGET_ID1 / L2 -> TARGET_PROP_ID2 -> TARGET_ID2（用于 MIX_2 等多关系模板）
-        if 'L1' in params and 'TARGET_PROP_ID1' in params and 'TARGET_ID1' in params:
+
+        # 识别 Label1 -> TARGET_PROP_ID1 -> TARGET_ID1 / Label2 -> TARGET_PROP_ID2 -> TARGET_ID2
+        if 'Label1' in params and 'TARGET_PROP_ID1' in params and 'TARGET_ID1' in params:
             groups.append({
-                'label_param': 'L1',
+                'label_param': 'Label1',
                 'prop_value_pairs': [('TARGET_PROP_ID1', 'TARGET_ID1')]
             })
-        if 'L2' in params and 'TARGET_PROP_ID2' in params and 'TARGET_ID2' in params:
+        if 'Label2' in params and 'TARGET_PROP_ID2' in params and 'TARGET_ID2' in params:
             groups.append({
-                'label_param': 'L2',
+                'label_param': 'Label2',
                 'prop_value_pairs': [('TARGET_PROP_ID2', 'TARGET_ID2')]
             })
-        
+
         # 识别硬编码标签的情况：当模板中有 PROP_ID 和 VALUE 但没有 LABEL 参数时
-        # 从模板字符串中提取硬编码的标签（如 :entity）
         if 'PROP_ID' in params and 'VALUE' in params:
-            # 检查是否已经有 LABEL 相关的参数组
-            has_label_param = any('LABEL' in group.get('label_param', '') or 
-                                 group.get('label_param', '') in ['L', 'L1', 'L2', 'L3', 'L4'] 
-                                 for group in groups)
-            
+            label_param_keywords = (
+                'LABEL', 'Label', 'GroupLabel', 'StartLabel', 'EndLabel',
+                'RefLabel', 'TARGET_LABEL', 'GROUP_LABEL',
+            )
+            has_label_param = any(
+                group.get('label_param', '').startswith(label_param_keywords)
+                for group in groups
+            )
+
             if not has_label_param:
-                # 从模板字符串中提取硬编码的标签
-                # 匹配模式: (var:label {$PROP_ID: $VALUE}) 或 (:label {$PROP_ID: $VALUE})
                 hardcoded_labels = []
-                # 查找所有硬编码的标签，例如 :entity, :passage 等
-                # 匹配 (var:label {$PROP_ID: $VALUE}) 或 (var:label {$PROP_ID:$VALUE})
                 pattern = r':(\w+)\s*\{[^}]*\$PROP_ID[^}]*\$VALUE[^}]*\}'
                 matches = re.findall(pattern, template.template)
                 if matches:
                     hardcoded_labels.extend(matches)
-                
-                # 去重
+
                 hardcoded_labels = list(set(hardcoded_labels))
-                
-                # 如果找到了硬编码的标签，创建一个参数组
+
                 if hardcoded_labels:
-                    # 使用第一个找到的硬编码标签
                     hardcoded_label = hardcoded_labels[0]
                     groups.append({
-                        'label_param': hardcoded_label,  # 直接使用标签名，而不是参数名
+                        'label_param': hardcoded_label,
                         'prop_value_pairs': [('PROP_ID', 'VALUE')],
-                        'is_hardcoded': True  # 标记这是硬编码的标签
+                        'is_hardcoded': True
                     })
-        
+
         return groups
     
     def _fill_params_from_sampled_node(self, template: Template, group: Dict[str, Any], 
@@ -889,6 +1104,12 @@ class QueryBuilder:
             node_props = list(sampled_node.keys())
             if self.excluded_return_props:
                 node_props = [p for p in node_props if p not in self.excluded_return_props]
+            
+            # SET 左侧的普通属性不能采到 id/node_id/xxxId，否则会改变节点身份字段。
+            if self._is_set_target_property_param(template, prop_param):
+                node_props = [p for p in node_props if not self._is_id_property(p)]
+                if not node_props:
+                    return False
             
             # 对于聚合相关查询，普通属性参数（如 P、PROP 等）不应落到 ID 相关属性上
             # 注意：这里仅针对“普通属性参数”做过滤，真正的 ID 参数（如 PROP_ID / PROP_ID1 等）
@@ -1127,10 +1348,11 @@ class QueryBuilder:
                     var = m_var.group(1)
                     end_param = var_to_param.get(var)
             
-            # 有 rel 和 end 即添加约束（start 可为空，如 MATCH (a)-[r:$R]->(b:$L1) 中 (a) 无标签）
-            # 保证 L1 等 end 标签按关系 R 的语义从 schema.triplets 合法 end 中采样
-            if rel_param and end_param:
-                constraints.append((start_param or '', rel_param, end_param))
+            # start または end のどちらか一方でも判明していれば制約として登録する。
+            # 例: MATCH (n:$LABEL)-[:$REL_TYPE]->(m) では end_param=None だが
+            # start_param='LABEL' だけで REL_TYPE の候補を LABEL の有効関係に絞れる。
+            if rel_param and (start_param or end_param):
+                constraints.append((start_param or '', rel_param, end_param or ''))
                 
         return constraints
 
@@ -1141,9 +1363,14 @@ class QueryBuilder:
         # 获取模版约束
         constraints = self._get_template_constraints(template.template)
 
-        # 处理所有LABEL变体（LABEL, LABEL1, LABEL2, TARGET_LABEL, START_LABEL, END_LABEL, GROUP_LABEL, GL等）
-        # GROUP_LABEL/GL 必须按关系的 end 约束采样，避免出现 Company_Guarantee_Company->Account 等错误
-        if param_name.startswith('LABEL') or param_name in ('START_LABEL', 'END_LABEL', 'L1', 'L2', 'L3', 'L4', 'L', 'SL', 'EL', 'RL', 'REL_NODE_LABEL', 'TARGET_LABEL', 'GROUP_LABEL', 'GL'):
+        # 处理所有LABEL变体（LABEL, LABEL1, LABEL2, TARGET_LABEL, START_LABEL, END_LABEL, GROUP_LABEL等）
+        # GROUP_LABEL 必须按关系的 end 约束采样，避免出现 Company_Guarantee_Company->Account 等错误
+        if param_name.startswith('LABEL') or param_name in (
+            'START_LABEL', 'END_LABEL', 'REL_NODE_LABEL',
+            'TARGET_LABEL', 'GROUP_LABEL',
+            'Label', 'Label1', 'Label2', 'Label3', 'Label4', 'Label5',
+            'StartLabel', 'EndLabel', 'GroupLabel', 'RefLabel',
+        ):
             # 随机选择一个label，优先排除技术性基础标签（如 NGDBNode）
             all_labels = list(self.schema.labels.keys())
             if not all_labels:
@@ -1158,7 +1385,7 @@ class QueryBuilder:
                 labels = all_labels
             
             # 优先选择有可用属性的标签
-            # 这样可以避免后续生成 PROP/NP 等参数时失败
+            # 这样可以避免后续生成 PROP/NumProp 等参数时失败
             labels_with_props = []
             for lb in labels:
                 if lb in self.schema.labels:
@@ -1219,8 +1446,10 @@ class QueryBuilder:
                 return None
             return random.choice(list(candidates))
         
-        # 处理所有REL变体（REL_TYPE, REL1, REL2, REL3, R1, R2等）
-        elif param_name.startswith('REL') and param_name != 'REL_PROP' or param_name in ('R1', 'R2', 'R3', 'REL', 'R'):
+        # 处理所有REL变体（REL_TYPE, REL1, REL2, REL3, Rel, Rel1-3 等）
+        elif (param_name.startswith('REL') and param_name != 'REL_PROP') or param_name in (
+            'REL', 'Rel', 'Rel1', 'Rel2', 'Rel3',
+        ):
             # 如果是 REL_TYPE，并且已经通过 VALUE/PROP_ID 采样到了具体节点，
             # 优先从该真实节点上存在的关系类型中采样，避免与节点无关的随机关系类型
             if param_name == 'REL_TYPE':
@@ -1242,7 +1471,8 @@ class QueryBuilder:
                 return None
             
             candidates = set(rel_types)
-            had_strict_constraint = False  # 是否应用过 (L1,R1,L2) 严格约束
+            had_strict_constraint = False  # 是否应用过 (Label1,Rel1,Label2) 严格约束
+            had_any_constraint = False  # 是否应用过任意约束（含单端标签约束）
             if self.schema.triplets:
                 for start, rel, end in constraints:
                     if rel == param_name:
@@ -1250,46 +1480,52 @@ class QueryBuilder:
                             s_val = current_params[start]
                             valid_rels = {t[1] for t in self.schema.triplets if t[0] == s_val}
                             candidates &= valid_rels
-                        
+                            had_any_constraint = True
+
                         if end in current_params:
                             e_val = current_params[end]
                             valid_rels = {t[1] for t in self.schema.triplets if t[2] == e_val}
                             candidates &= valid_rels
-                            
+                            had_any_constraint = True
+
                             if start in current_params:
                                 s_val = current_params[start]
                                 valid_rels_strict = {t[1] for t in self.schema.triplets if t[0] == s_val and t[2] == e_val}
                                 candidates &= valid_rels_strict
                                 had_strict_constraint = True
-            
+
             if not candidates:
-                # 若已按 (L1,R1,L2) 严格约束过滤，则不允许回退到随机关系，避免 Medium-Account 间出现 Company_Own_Account
-                if had_strict_constraint:
+                # 只要应用过任意约束（单端或双端标签），candidates 为空说明无合法关系，不允许回退到随机全集
+                if had_any_constraint:
                     return None
-                # 否则回退：尝试随机返回一个关系类型
+                # 未应用过任何约束时才允许回退（即模板中 REL 参数无关联标签约束）
                 if rel_types:
                     return random.choice(rel_types)
                 return None
             return random.choice(list(candidates))
         
-        elif param_name in ('REL_PROP', 'RP'):
+        elif param_name in ('REL_PROP', 'RelProp'):
             # 关系属性 - 从schema中获取真实的关系属性
             # 首先尝试从current_params中获取关系类型
             rel_type = None
-            for rel_key in ['REL_TYPE', 'REL1', 'REL2', 'REL3', 'R1', 'R2', 'R3', 'REL', 'R']:
+            for rel_key in ['REL_TYPE', 'REL1', 'REL2', 'REL3', 'REL', 'Rel', 'Rel1', 'Rel2', 'Rel3']:
                 if rel_key in current_params:
                     rel_type = current_params.get(rel_key)
                     break
+            
+            def eligible_rel_props(rel_info: RelationshipInfo) -> List[str]:
+                rel_props = list(rel_info.properties.keys())
+                if self.excluded_return_props:
+                    rel_props = [p for p in rel_props if p not in self.excluded_return_props]
+                if self._is_set_target_property_param(template, param_name):
+                    rel_props = [p for p in rel_props if not self._is_id_property(p)]
+                return rel_props
             
             # 如果找到了关系类型，尝试从schema中获取该关系的属性
             if rel_type and rel_type in self.schema.relationships:
                 rel_info = self.schema.relationships[rel_type]
                 if rel_info.properties:
-                    # 从真实的关系属性中选择
-                    rel_props = list(rel_info.properties.keys())
-                    # 排除内部字段
-                    if self.excluded_return_props:
-                        rel_props = [p for p in rel_props if p not in self.excluded_return_props]
+                    rel_props = eligible_rel_props(rel_info)
                     if rel_props:
                         return random.choice(rel_props)
             
@@ -1300,16 +1536,14 @@ class QueryBuilder:
                 # 如果是 mcp 或 multi_fin 数据集，排除 mention_in 和 is_participated_by
                 if self.dataset in ("mcp", "multi_fin") and rt in ("mention_in", "is_participated_by"):
                     continue
-                if rel_info.properties:
+                if eligible_rel_props(rel_info):
                     rels_with_props.append(rt)
             
             if rels_with_props:
                 # 随机选择一个有属性的关系类型，然后选择其属性
                 selected_rel_type = random.choice(rels_with_props)
                 rel_info = self.schema.relationships[selected_rel_type]
-                rel_props = list(rel_info.properties.keys())
-                if self.excluded_return_props:
-                    rel_props = [p for p in rel_props if p not in self.excluded_return_props]
+                rel_props = eligible_rel_props(rel_info)
                 if rel_props:
                     return random.choice(rel_props)
             
@@ -1319,17 +1553,38 @@ class QueryBuilder:
         
         elif param_name in (
             'PROP', 'PROP1', 'PROP2',
-            'P', 'P1', 'P2', 'SP', 'BP',
+            'Prop', 'Prop1', 'Prop2', 'StartProp', 'BaseProp',
             'RET_PROP', 'RETURN_PROP', 'RET_PROP1', 'RET_PROP2', 'RET_PROP3',
             'FILTER_PROP', 'NODE_PROP', 'START_PROP', 'REF_PROP',
             'UPDATE_PROP',  # 用于 SET n.$UPDATE_PROP = $UPDATE_VAL
-            'P', 'RET',
+            'RET',
         ):
             # 需要根据已选的label来选择属性
             # 尝试从不同的label参数获取label
             label = None
-            for label_key in ['LABEL2', 'LABEL3', 'LABEL4', 'LABEL1', 'LABEL', 'END_LABEL', 'START_LABEL', 'L1', 'L2', 'L3', 'L4', 'L', 'SL', 'EL', 'RL', 'TARGET_LABEL']:
+            if param_name == 'RET_PROP1':
+                preferred_label_keys = ['LABEL2', 'Label2', 'TARGET_LABEL', 'END_LABEL', 'EndLabel']
+            elif param_name == 'RET_PROP2':
+                preferred_label_keys = ['LABEL3', 'Label3', 'LABEL2', 'Label2']
+            elif param_name == 'RET_PROP3':
+                preferred_label_keys = ['LABEL4', 'Label4', 'LABEL3', 'Label3']
+            elif param_name == 'FILTER_PROP':
+                preferred_label_keys = ['LABEL3', 'Label3', 'LABEL2', 'Label2']
+            else:
+                preferred_label_keys = []
+
+            for label_key in preferred_label_keys:
                 if label_key in current_params:
+                    label = current_params.get(label_key)
+                    break
+
+            for label_key in [
+                'LABEL2', 'LABEL3', 'LABEL4', 'LABEL1', 'LABEL',
+                'END_LABEL', 'START_LABEL', 'TARGET_LABEL',
+                'Label2', 'Label3', 'Label4', 'Label5', 'Label1', 'Label',
+                'EndLabel', 'StartLabel', 'GroupLabel', 'RefLabel',
+            ]:
+                if label is None and label_key in current_params:
                     label = current_params.get(label_key)
                     break
             
@@ -1350,6 +1605,12 @@ class QueryBuilder:
                 if not properties:
                     return None
 
+            # SET 左侧属性不能是 id/node_id/xxxId 等身份字段。
+            if self._is_set_target_property_param(template, param_name):
+                properties = [p for p in properties if not self._is_id_property(p)]
+                if not properties:
+                    return None
+            
             # 如果是聚合查询，排除ID相关的属性
             if self._is_aggregate_query(template, current_params):
                 properties = [p for p in properties if not self._is_id_property(p)]
@@ -1376,7 +1637,12 @@ class QueryBuilder:
                     # 记录原始label，用于更新current_params
                     original_label = label
                     original_label_key = None
-                    for label_key in ['LABEL2', 'LABEL3', 'LABEL4', 'LABEL1', 'LABEL', 'END_LABEL', 'START_LABEL', 'L1', 'L2', 'L3', 'L4', 'L', 'SL', 'EL', 'RL']:
+                    for label_key in [
+                        'LABEL2', 'LABEL3', 'LABEL4', 'LABEL1', 'LABEL',
+                        'END_LABEL', 'START_LABEL',
+                        'Label2', 'Label3', 'Label4', 'Label5', 'Label1', 'Label',
+                        'EndLabel', 'StartLabel', 'GroupLabel', 'RefLabel',
+                    ]:
                         if label_key in current_params and current_params[label_key] == original_label:
                             original_label_key = label_key
                             break
@@ -1390,6 +1656,9 @@ class QueryBuilder:
                         candidate_props = list(self.schema.labels[candidate_label].properties.keys())
                         if self.excluded_return_props:
                             candidate_props = [p for p in candidate_props if p not in self.excluded_return_props]
+                        
+                        if self._is_set_target_property_param(template, param_name):
+                            candidate_props = [p for p in candidate_props if not self._is_id_property(p)]
                         
                         # 如果是聚合查询，排除ID相关的属性
                         if self._is_aggregate_query(template, current_params):
@@ -1424,7 +1693,13 @@ class QueryBuilder:
             # 当参数是 PROP_ID 时，选择节点属性中含有 id 的属性
             # 模板中 (g:$GROUP_LABEL {$PROP_ID: $GID}) 的 PROP_ID 必须来自 GROUP_LABEL 对应标签，避免 Account {companyId}
             label = None
-            for label_key in ['GROUP_LABEL', 'GL', 'LABEL2', 'LABEL3', 'LABEL4', 'LABEL1', 'LABEL', 'END_LABEL', 'START_LABEL', 'L1', 'L2', 'L3', 'L4', 'L', 'SL', 'EL', 'RL']:
+            for label_key in [
+                'GROUP_LABEL', 'GroupLabel',
+                'LABEL2', 'LABEL3', 'LABEL4', 'LABEL1', 'LABEL',
+                'END_LABEL', 'START_LABEL',
+                'Label2', 'Label3', 'Label4', 'Label5', 'Label1', 'Label',
+                'EndLabel', 'StartLabel', 'RefLabel',
+            ]:
                 if label_key in current_params:
                     label = current_params.get(label_key)
                     break
@@ -1455,9 +1730,9 @@ class QueryBuilder:
             return random.choice(id_properties)
         
         elif param_name == 'PROP_ID1':
-            # PROP_ID1 对应第一个节点的 ID 属性，通常与 L1 或 LABEL1 关联
+            # PROP_ID1 对应第一个节点的 ID 属性，通常与 Label1 或 LABEL1 关联
             label = None
-            for label_key in ['L1', 'LABEL1', 'START_LABEL', 'SL']:
+            for label_key in ['Label1', 'LABEL1', 'START_LABEL', 'StartLabel']:
                 if label_key in current_params:
                     label = current_params.get(label_key)
                     break
@@ -1488,9 +1763,9 @@ class QueryBuilder:
             return random.choice(id_properties)
         
         elif param_name == 'PROP_ID2':
-            # PROP_ID2 对应第二个节点的 ID 属性，通常与 L2 或 LABEL2 关联
+            # PROP_ID2 对应第二个节点的 ID 属性，通常与 Label2 或 LABEL2 关联
             label = None
-            for label_key in ['L2', 'LABEL2', 'END_LABEL', 'EL']:
+            for label_key in ['Label2', 'LABEL2', 'END_LABEL', 'EndLabel']:
                 if label_key in current_params:
                     label = current_params.get(label_key)
                     break
@@ -1521,14 +1796,14 @@ class QueryBuilder:
             return random.choice(id_properties)
         
         elif param_name in ('TARGET_PROP_ID', 'TARGET_PROP_ID1', 'TARGET_PROP_ID2'):
-            # 目标节点的 ID 属性名，与 TARGET_LABEL/L1/L2 关联（用于 management/MIX 模板）
+            # 目标节点的 ID 属性名，与 TARGET_LABEL/Label1/Label2 关联（用于 management/MIX 模板）
             label = None
             if param_name == 'TARGET_PROP_ID':
-                label_keys = ['TARGET_LABEL', 'L2', 'END_LABEL', 'EL']
+                label_keys = ['TARGET_LABEL', 'Label2', 'END_LABEL', 'EndLabel']
             elif param_name == 'TARGET_PROP_ID1':
-                label_keys = ['L1', 'START_LABEL', 'LABEL', 'L']
+                label_keys = ['Label1', 'START_LABEL', 'StartLabel', 'LABEL', 'Label']
             else:  # TARGET_PROP_ID2
-                label_keys = ['L2', 'TARGET_LABEL', 'END_LABEL', 'EL', 'LABEL', 'L']
+                label_keys = ['Label2', 'TARGET_LABEL', 'END_LABEL', 'EndLabel', 'LABEL', 'Label']
             for label_key in label_keys:
                 if label_key in current_params:
                     label = current_params.get(label_key)
@@ -1557,21 +1832,27 @@ class QueryBuilder:
             else:
                 return random.choice(self.STRING_OPERATORS)
         
-        elif param_name in ('VALUE', 'VAL', 'FILTER_VAL', 'NODE_VALUE', 'START_VALUE', 'V', 'V1', 'V2', 'V3', 'V4', 'V5', 'SV', 'NV', 'NEW_VAL', 'REF_VAL', 'VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5'):
-            # SET r.$RP = $VALUE 等：优先从关系属性的 sample_values 采样，避免合成 val_xxxx
-            rel_type = current_params.get('R') or current_params.get('REL_TYPE') or current_params.get('REL')
-            rp = current_params.get('RP') or current_params.get('REL_PROP')
+        elif param_name in (
+            'VALUE', 'VAL', 'FILTER_VAL', 'NODE_VALUE', 'START_VALUE',
+            'Val', 'Val1', 'Val2', 'Val3', 'Val4', 'Val5',
+            'StartVal', 'NumVal', 'NumVal1', 'NumVal2', 'NumVal3', 'NumVal4', 'NumVal5',
+            'NEW_VAL', 'REF_VAL',
+            'VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5',
+        ):
+            # SET r.$RelProp = $VALUE 等：优先从关系属性的 sample_values 采样，避免合成 val_xxxx
+            rel_type = current_params.get('REL_TYPE') or current_params.get('REL') or current_params.get('Rel')
+            rp = current_params.get('REL_PROP') or current_params.get('RelProp')
             if rel_type and rp and rel_type in self.schema.relationships:
                 rel_props = self.schema.relationships[rel_type].properties
                 if rp in rel_props and rel_props[rp].sample_values:
                     pool = list(rel_props[rp].sample_values)
-                    exclude = [current_params[k] for k in ('VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5') if k in current_params and k != param_name]
+                    exclude = [current_params[k] for k in ('VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5', 'Val1', 'Val2', 'Val3', 'Val4', 'Val5') if k in current_params and k != param_name]
                     pool = [v for v in pool if v not in exclude]
                     value = random.choice(pool) if pool else random.choice(rel_props[rp].sample_values)
                     if value is not None:
                         return value
             # 根据属性获取一个样本值（必须从数据库对应 PROP 采样，PROP 必须从对应 LABEL 采样）
-            # VALUE/VAL/V1..V5 对应 (n:$LABEL {$PROP: $VALUE1}) 或 (n:$LABEL {$PROP_ID: $VALUE1})
+            # VALUE/VAL/Val1..Val5 对应 (n:$LABEL {$PROP: $VALUE1}) 或 (n:$LABEL {$PROP_ID: $VALUE1})
             # 当模板中为 {$PROP_ID: $VALUE1} 时，VALUE1 必须从 PROP_ID 对应属性（如 loanId）的 sample_values 采样，
             # 不能从 PROP（如 loanUsage）采样，否则会出现 loanId: 'medical expenses' 这类错误。
             prop = None
@@ -1584,16 +1865,39 @@ class QueryBuilder:
             )
             if value_bound_to_prop_id and current_params.get('PROP_ID'):
                 # 明确从 PROP_ID 对应属性采样，避免用 PROP 的 sample_values 填到 PROP_ID 上
-                prop_order = ['PROP_ID', 'PROP_ID1', 'PROP_ID2', 'PROP', 'P', 'PROP1', 'P1', 'PROP2', 'P2', 'FILTER_PROP', 'NODE_PROP', 'START_PROP', 'SP', 'NP', 'BP', 'GP', 'RP']
+                prop_order = [
+                    'PROP_ID', 'PROP_ID1', 'PROP_ID2',
+                    'PROP', 'PROP1', 'PROP2',
+                    'Prop', 'Prop1', 'Prop2',
+                    'FILTER_PROP', 'NODE_PROP', 'START_PROP',
+                    'StartProp', 'NumProp', 'BaseProp', 'GroupProp', 'RelProp',
+                ]
             elif param_name in ('VALUE', 'VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5'):
-                prop_order = ['PROP', 'P', 'PROP1', 'P1', 'PROP2', 'P2', 'FILTER_PROP', 'NODE_PROP', 'START_PROP', 'PROP_ID', 'PROP_ID1', 'PROP_ID2', 'SP', 'NP', 'BP', 'GP', 'RP']
+                prop_order = [
+                    'PROP', 'PROP1', 'PROP2',
+                    'Prop', 'Prop1', 'Prop2',
+                    'FILTER_PROP', 'NODE_PROP', 'START_PROP',
+                    'PROP_ID', 'PROP_ID1', 'PROP_ID2',
+                    'StartProp', 'NumProp', 'BaseProp', 'GroupProp', 'RelProp',
+                ]
             else:
-                prop_order = ['P', 'PROP', 'P1', 'PROP_ID1', 'PROP_ID', 'PROP_ID2', 'PROP1', 'PROP2', 'FILTER_PROP', 'NODE_PROP', 'START_PROP', 'P2', 'SP', 'NP', 'BP', 'GP', 'RP']
+                prop_order = [
+                    'Prop', 'PROP', 'Prop1', 'Prop2',
+                    'PROP_ID1', 'PROP_ID', 'PROP_ID2',
+                    'PROP1', 'PROP2',
+                    'FILTER_PROP', 'NODE_PROP', 'START_PROP',
+                    'StartProp', 'NumProp', 'BaseProp', 'GroupProp', 'RelProp',
+                ]
             for prop_key in prop_order:
                 if prop_key in current_params:
                     prop = current_params.get(prop_key)
                     break
-            for label_key in ['LABEL', 'L', 'L1', 'LABEL1', 'START_LABEL', 'LABEL2', 'L2', 'LABEL3', 'L3', 'L4', 'SL', 'EL', 'RL', 'GL']:
+            for label_key in [
+                'LABEL', 'LABEL1', 'LABEL2', 'LABEL3', 'LABEL4',
+                'START_LABEL', 'END_LABEL', 'GROUP_LABEL', 'TARGET_LABEL',
+                'Label', 'Label1', 'Label2', 'Label3', 'Label4', 'Label5',
+                'StartLabel', 'EndLabel', 'GroupLabel', 'RefLabel',
+            ]:
                 if label_key in current_params:
                     label = current_params.get(label_key)
                     break
@@ -1605,7 +1909,7 @@ class QueryBuilder:
                     prop_info = self.schema.labels[label].properties[prop]
                     if prop_info.sample_values:
                         pool = list(prop_info.sample_values)
-                        exclude = [current_params[k] for k in ('VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5', 'V1', 'V2', 'V3', 'V4', 'V5', 'VAL1', 'VAL2', 'VAL3', 'VAL4', 'VAL5') if k in current_params and k != param_name]
+                        exclude = [current_params[k] for k in ('VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5', 'Val1', 'Val2', 'Val3', 'Val4', 'Val5') if k in current_params and k != param_name]
                         pool = [v for v in pool if v not in exclude]
                         value = random.choice(pool) if pool else (random.choice(prop_info.sample_values) if prop_info.sample_values else None)
                 if value is None:
@@ -1619,7 +1923,7 @@ class QueryBuilder:
                         if not prop_info.sample_values:
                             continue
                         pool = list(prop_info.sample_values)
-                        exclude = [current_params[k] for k in ('VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5', 'V1', 'V2', 'V3', 'V4', 'V5', 'VAL1', 'VAL2', 'VAL3', 'VAL4', 'VAL5') if k in current_params and k != param_name]
+                        exclude = [current_params[k] for k in ('VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5', 'Val1', 'Val2', 'Val3', 'Val4', 'Val5') if k in current_params and k != param_name]
                         pool = [v for v in pool if v not in exclude]
                         value = random.choice(pool) if pool else random.choice(prop_info.sample_values)
                         break
@@ -1662,11 +1966,16 @@ class QueryBuilder:
             agg_functions = ['sum', 'avg', 'count', 'min', 'max', 'collect']
             return random.choice(agg_functions)
 
-        # 2. 数值属性参数（NUM_PROP, NUM_PROP1, NUM_PROP2）
-        elif param_name.startswith('NUM_PROP') or param_name in ('NUM_PROP', 'NP'):
+        # 2. 数值属性参数（NUM_PROP, NUM_PROP1, NUM_PROP2, NumProp）
+        elif param_name.startswith('NUM_PROP') or param_name in ('NUM_PROP', 'NumProp'):
             # 需要根据已选的label来选择数值类型的属性
             label = None
-            for label_key in ['LABEL2', 'LABEL3', 'LABEL4', 'LABEL1', 'LABEL', 'END_LABEL', 'START_LABEL', 'L1', 'L2', 'L3', 'L4', 'L', 'SL', 'EL', 'RL']:
+            for label_key in [
+                'LABEL2', 'LABEL3', 'LABEL4', 'LABEL1', 'LABEL',
+                'END_LABEL', 'START_LABEL',
+                'Label2', 'Label3', 'Label4', 'Label5', 'Label1', 'Label',
+                'EndLabel', 'StartLabel', 'GroupLabel', 'RefLabel',
+            ]:
                 if label_key in current_params:
                     label = current_params.get(label_key)
                     break
@@ -1773,10 +2082,10 @@ class QueryBuilder:
             aliases = ['result', 'value', 'data', 'item', 'entity', 'group', 'collection']
             return random.choice(aliases)
 
-        # 8. 分组属性参数（GROUP_PROP）
-        elif param_name in ('GROUP_PROP', 'GP'):
+        # 8. 分组属性参数（GROUP_PROP, GroupProp）
+        elif param_name in ('GROUP_PROP', 'GroupProp'):
             # 需要根据GROUP_LABEL来选择属性
-            label = current_params.get('GROUP_LABEL') or current_params.get('GL')
+            label = current_params.get('GROUP_LABEL') or current_params.get('GroupLabel')
             
             if not label or label not in self.schema.labels:
                 labels = list(self.schema.labels.keys())
@@ -1801,8 +2110,8 @@ class QueryBuilder:
             
             return random.choice(properties)
 
-        # 9. 分组标签参数（GROUP_LABEL）
-        elif param_name in ('GROUP_LABEL', 'GL'):
+        # 9. 分组标签参数（GROUP_LABEL, GroupLabel）
+        elif param_name in ('GROUP_LABEL', 'GroupLabel'):
             all_labels = list(self.schema.labels.keys())
             if not all_labels:
                 return None
@@ -1847,45 +2156,59 @@ class QueryBuilder:
             # 启发式规则：根据参数名推断关联的 Label 与 PROP
             label_keys = []
             if base in ('GID', 'GID1', 'GID2', 'GID3', 'GID4', 'GID5'):
-                label_keys = ['GROUP_LABEL', 'GL']
-                # GID 对应目标节点 (g:$GL {$PROP_ID: $GID})，必须用 PROP_ID 从 GL 采样
+                label_keys = ['GROUP_LABEL', 'GroupLabel']
+                # GID 对应目标节点 (g:$GroupLabel {$PROP_ID: $GID})，必须用 PROP_ID 从 GroupLabel 采样
                 prop_to_use = current_params.get('PROP_ID')
             elif base == 'CID':
-                label_keys = ['L3']
+                label_keys = ['Label3', 'LABEL3']
                 prop_to_use = current_params.get('PROP_ID')
             elif base in ('AID', 'ID1'):
-                label_keys = ['L1', 'START_LABEL']
+                label_keys = ['Label1', 'LABEL1', 'START_LABEL', 'StartLabel']
                 prop_to_use = current_params.get('PROP_ID1') or current_params.get('PROP_ID')
             elif base in ('BID', 'ID2'):
-                label_keys = ['L2', 'END_LABEL', 'LABEL2']
+                label_keys = ['Label2', 'LABEL2', 'END_LABEL', 'EndLabel']
                 prop_to_use = current_params.get('PROP_ID2') or current_params.get('PROP_ID')
             elif base == 'TARGET_ID':
                 label_keys = ['TARGET_LABEL']
                 prop_to_use = current_params.get('TARGET_PROP_ID')
             elif base == 'TARGET_ID1':
-                label_keys = ['L1', 'START_LABEL', 'LABEL', 'L']
+                label_keys = ['Label1', 'LABEL1', 'START_LABEL', 'StartLabel', 'LABEL', 'Label']
                 prop_to_use = current_params.get('TARGET_PROP_ID1')
             elif base == 'TARGET_ID2':
-                label_keys = ['L2', 'TARGET_LABEL', 'END_LABEL', 'EL']
+                label_keys = ['Label2', 'LABEL2', 'TARGET_LABEL', 'END_LABEL', 'EndLabel']
                 prop_to_use = current_params.get('TARGET_PROP_ID2')
             elif base == 'DELETE_ID':
-                label_keys = ['LABEL', 'L1', 'L', 'START_LABEL']
+                label_keys = ['LABEL', 'Label', 'Label1', 'LABEL1', 'START_LABEL', 'StartLabel']
                 prop_to_use = current_params.get('PROP_ID')
             elif base == 'NAME':
-                label_keys = ['LABEL', 'L1', 'L', 'START_LABEL']
+                label_keys = ['LABEL', 'Label', 'Label1', 'LABEL1', 'START_LABEL', 'StartLabel']
             elif base == 'MID':
-                label_keys = ['L2', 'END_LABEL']
+                label_keys = ['Label2', 'LABEL2', 'END_LABEL', 'EndLabel']
                 prop_to_use = current_params.get('PROP_ID')
             else:
-                label_keys = ['LABEL', 'L1', 'L2', 'L3', 'L4', 'L', 'GL', 'SL', 'EL', 'RL', 'TARGET_LABEL']
-            
+                label_keys = [
+                    'LABEL', 'Label',
+                    'Label1', 'Label2', 'Label3', 'Label4', 'Label5',
+                    'LABEL1', 'LABEL2', 'LABEL3', 'LABEL4',
+                    'GroupLabel', 'StartLabel', 'EndLabel', 'RefLabel',
+                    'GROUP_LABEL', 'START_LABEL', 'END_LABEL',
+                    'TARGET_LABEL',
+                ]
+
             for key in label_keys:
                 if key in current_params:
                     label = current_params[key]
                     break
-            
+
             if not label:
-                 for label_key in ['LABEL', 'L1', 'L2', 'L3', 'L4', 'L', 'GL', 'SL', 'EL', 'RL', 'TARGET_LABEL']:
+                 for label_key in [
+                    'LABEL', 'Label',
+                    'Label1', 'Label2', 'Label3', 'Label4', 'Label5',
+                    'LABEL1', 'LABEL2', 'LABEL3', 'LABEL4',
+                    'GroupLabel', 'StartLabel', 'EndLabel', 'RefLabel',
+                    'GROUP_LABEL', 'START_LABEL', 'END_LABEL',
+                    'TARGET_LABEL',
+                 ]:
                     if label_key in current_params:
                         label = current_params[label_key]
                         break
@@ -2006,7 +2329,7 @@ class QueryBuilder:
 class QueryExecutor:
     """查询执行器"""
     
-    def __init__(self, driver, timeout: int = 300, max_results: int = 1000):
+    def __init__(self, driver, timeout: int = 298, max_results: int = 1000):
         self.driver = driver
         self.timeout = timeout
         self.max_results = max_results  # 最大结果数量限制
@@ -2019,191 +2342,76 @@ class QueryExecutor:
             query: Cypher查询语句
             allow_empty: 是否允许结果为空（对于CREATE/DELETE等无返回值的操作应设为True）
         """
-        @contextmanager
-        def timeout_context(seconds):
-            """超时上下文管理器（仅Unix系统）"""
-            def timeout_handler(signum, frame):
-                raise TimeoutError(f"查询执行超时 ({seconds}秒)")
-            
-            if hasattr(signal, 'SIGALRM'):
-                old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(seconds)
-                try:
-                    yield
-                finally:
-                    signal.alarm(0)
-                    signal.signal(signal.SIGALRM, old_handler)
-            else:
-                # Windows系统不支持SIGALRM，直接yield（使用时间检查）
-                yield
-        
         try:
             # 检查查询是否已经包含LIMIT，如果没有且是可变长度路径查询，添加LIMIT
             query_with_limit = self._add_limit_if_needed(query)
-            
+
             with self.driver.session() as session:
-                result = session.run(query_with_limit)
-                
-                records = []
-                record_count = 0
-                start_time = time.time()
-                
-                # 使用超时上下文（如果支持SIGALRM）
-                if hasattr(signal, 'SIGALRM'):
-                    try:
-                        with timeout_context(self.timeout):
-                            for record in result:
-                                if record_count >= self.max_results:
-                                    logger.warning(f"查询结果超过最大限制 ({self.max_results})，已截断")
-                                    break
-                                
-                                # 将记录转换为字典
-                                record_dict = {}
-                                for key in record.keys():
-                                    value = record[key]
-                                    # 处理节点对象
-                                    if isinstance(value, Node):
-                                        # Neo4j 节点对象：提取所有属性
-                                        # 使用 dict() 转换，如果失败则尝试 items() 方法
-                                        try:
-                                            record_dict[key] = dict(value)
-                                        except (TypeError, AttributeError):
-                                            try:
-                                                record_dict[key] = dict(value.items())
-                                            except:
-                                                # 如果都失败，尝试手动构建字典
-                                                record_dict[key] = {k: v for k, v in value.items()}
-                                    # 处理关系对象
-                                    elif isinstance(value, Relationship):
-                                        # Neo4j 关系对象：提取所有属性
-                                        try:
-                                            record_dict[key] = dict(value)
-                                        except (TypeError, AttributeError):
-                                            try:
-                                                record_dict[key] = dict(value.items())
-                                            except:
-                                                record_dict[key] = {k: v for k, v in value.items()}
-                                    # 处理其他可迭代对象（列表、集合等）
-                                    elif hasattr(value, '__iter__') and not isinstance(value, (str, dict, bytes)):
-                                        try:
-                                            # 如果是列表，递归处理每个元素
-                                            if isinstance(value, (list, tuple)):
-                                                processed_list = []
-                                                for item in value:
-                                                    if isinstance(item, Node):
-                                                        try:
-                                                            processed_list.append(dict(item))
-                                                        except:
-                                                            try:
-                                                                processed_list.append(dict(item.items()))
-                                                            except:
-                                                                processed_list.append({k: v for k, v in item.items()})
-                                                    elif isinstance(item, Relationship):
-                                                        try:
-                                                            processed_list.append(dict(item))
-                                                        except:
-                                                            try:
-                                                                processed_list.append(dict(item.items()))
-                                                            except:
-                                                                processed_list.append({k: v for k, v in item.items()})
-                                                    else:
-                                                        processed_list.append(item)
-                                                record_dict[key] = processed_list
-                                            else:
-                                                record_dict[key] = dict(value)
-                                        except:
-                                            record_dict[key] = str(value)
-                                    else:
-                                        record_dict[key] = value
-                                records.append(record_dict)
-                                record_count += 1
-                    except TimeoutError:
-                        logger.warning(f"查询执行超时 ({self.timeout}秒)，已停止")
-                        return False, [], f"查询执行超时 ({self.timeout}秒)"
-                else:
-                    # Windows系统：使用时间检查
+                # begin_transaction(timeout=...) 告知服务端在指定秒数后终止事务，
+                # 服务端会返回标准错误响应，驱动可优雅处理，不会出现 defunct connection。
+                tx = session.begin_transaction(timeout=self.timeout)
+                try:
+                    result = tx.run(query_with_limit)
+
+                    records = []
+                    record_count = 0
+
+                    def _process_value(value):
+                        if isinstance(value, Node):
+                            try:
+                                return dict(value)
+                            except (TypeError, AttributeError):
+                                try:
+                                    return dict(value.items())
+                                except:
+                                    return {k: v for k, v in value.items()}
+                        elif isinstance(value, Relationship):
+                            try:
+                                return dict(value)
+                            except (TypeError, AttributeError):
+                                try:
+                                    return dict(value.items())
+                                except:
+                                    return {k: v for k, v in value.items()}
+                        elif hasattr(value, '__iter__') and not isinstance(value, (str, dict, bytes)):
+                            try:
+                                if isinstance(value, (list, tuple)):
+                                    return [_process_value(item) for item in value]
+                                else:
+                                    return dict(value)
+                            except:
+                                return str(value)
+                        else:
+                            return value
+
                     for record in result:
-                        # 检查是否超时
-                        elapsed = time.time() - start_time
-                        if elapsed > self.timeout:
-                            logger.warning(f"查询执行时间超过 {self.timeout} 秒，停止读取结果")
-                            return False, [], f"查询执行超时 ({self.timeout}秒)"
-                        
                         if record_count >= self.max_results:
                             logger.warning(f"查询结果超过最大限制 ({self.max_results})，已截断")
                             break
-                        
-                        # 将记录转换为字典
-                        record_dict = {}
-                        for key in record.keys():
-                            value = record[key]
-                            # 处理节点对象
-                            if isinstance(value, Node):
-                                # Neo4j 节点对象：提取所有属性
-                                # 使用 dict() 转换，如果失败则尝试 items() 方法
-                                try:
-                                    record_dict[key] = dict(value)
-                                except (TypeError, AttributeError):
-                                    try:
-                                        record_dict[key] = dict(value.items())
-                                    except:
-                                        # 如果都失败，尝试手动构建字典
-                                        record_dict[key] = {k: v for k, v in value.items()}
-                            # 处理关系对象
-                            elif isinstance(value, Relationship):
-                                # Neo4j 关系对象：提取所有属性
-                                try:
-                                    record_dict[key] = dict(value)
-                                except (TypeError, AttributeError):
-                                    try:
-                                        record_dict[key] = dict(value.items())
-                                    except:
-                                        record_dict[key] = {k: v for k, v in value.items()}
-                            # 处理其他可迭代对象（列表、集合等）
-                            elif hasattr(value, '__iter__') and not isinstance(value, (str, dict, bytes)):
-                                try:
-                                    # 如果是列表，递归处理每个元素
-                                    if isinstance(value, (list, tuple)):
-                                        processed_list = []
-                                        for item in value:
-                                            if isinstance(item, Node):
-                                                try:
-                                                    processed_list.append(dict(item))
-                                                except:
-                                                    try:
-                                                        processed_list.append(dict(item.items()))
-                                                    except:
-                                                        processed_list.append({k: v for k, v in item.items()})
-                                            elif isinstance(item, Relationship):
-                                                try:
-                                                    processed_list.append(dict(item))
-                                                except:
-                                                    try:
-                                                        processed_list.append(dict(item.items()))
-                                                    except:
-                                                        processed_list.append({k: v for k, v in item.items()})
-                                            else:
-                                                processed_list.append(item)
-                                        record_dict[key] = processed_list
-                                    else:
-                                        record_dict[key] = dict(value)
-                                except:
-                                    record_dict[key] = str(value)
-                            else:
-                                record_dict[key] = value
+
+                        record_dict = {key: _process_value(record[key]) for key in record.keys()}
                         records.append(record_dict)
                         record_count += 1
-                
+
+                    tx.commit()
+                except Exception:
+                    tx.rollback()
+                    raise
+                finally:
+                    tx.close()
+
                 # 只有非空结果才算成功，除非明确允许空结果
                 if records or allow_empty:
                     return True, records, None
                 else:
                     return False, [], "查询结果为空"
-                    
-        except TimeoutError as e:
-            return False, [], str(e)
+
         except Exception as e:
-            return False, [], str(e)
+            err_msg = str(e)
+            # 将服务端超时错误统一转换为超时标识，便于上层逻辑识别
+            if 'transaction' in err_msg.lower() and ('timeout' in err_msg.lower() or 'time' in err_msg.lower()):
+                return False, [], f"查询执行超时 ({self.timeout}秒)"
+            return False, [], err_msg
     
     def _add_limit_if_needed(self, query: str) -> str:
         """如果查询是可变长度路径查询且没有LIMIT，添加LIMIT子句"""
@@ -2288,11 +2496,15 @@ class QueryGenerator:
         """初始化所有组件"""
         if not self.driver:
             self.connect()
-        
+
         # 分析Schema
         self.schema = SchemaAnalyzer(self.driver)
         self.schema.analyze()
-        
+
+        # 从 YAML schema 文件加载权威三元组约束（覆盖 DB 噪声）
+        if self.dataset:
+            self.schema.load_schema_from_yaml(self.dataset)
+
         # 如果是 mcp 或 multi-fin 数据集，过滤掉 id 属性中以数字结尾的 sample_values
         if self.dataset in ("mcp", "multi_fin"):
             self._filter_id_samples_ending_with_digit()
@@ -2349,8 +2561,9 @@ class QueryGenerator:
         return max(1, self.schema.total_edges // 16)
     
     def generate_samples(self, target_count: Optional[int] = None, 
-                        max_attempts_multiplier: int = 10,
+                        max_attempts_multiplier: Optional[int] = None,
                         max_failures_per_template: int = 10000,
+                        max_timeouts_per_template: int = 3,
                         max_answer_count: int = 20,
                         min_attempts_per_template: int = 5,
                         reset_failures_interval: float = 0.25,
@@ -2358,17 +2571,21 @@ class QueryGenerator:
                         success_per_template: int = 20,
                         realtime_output_path: Optional[str] = None) -> List[QueryResult]:
         """
-        生成查询样本，按模版顺序，每个模版连续采样直到生成指定数量的成功查询
+        生成查询样本，按模版顺序循环采样。
+        每一轮中，每个模版最多生成 success_per_template 个成功查询；
+        轮次会持续进行，直到达到 target_count、超过最大尝试次数（如果启用），
+        或所有模版都无法继续产出成功查询。
         
         Args:
             target_count: 目标样本数量，默认为边数/16
-            max_attempts_multiplier: 最大尝试次数倍数
+            max_attempts_multiplier: 最大尝试次数倍数；为 None 时不限制全局尝试次数
             max_failures_per_template: 每个模版的最大连续失败次数，超过后跳过该模版（默认50）
+            max_timeouts_per_template: 每个模版的最大超时次数，超过后直接跳过（默认3）
             max_answer_count: 查询结果的最大数量阈值，超过此数量的查询将被抛弃（默认20）
             min_attempts_per_template: 每个模版的最小尝试次数，确保每个模版至少被尝试这么多次（默认5，已废弃，保留以兼容）
             reset_failures_interval: 阶段性重置失败计数的间隔（已废弃，保留以兼容）
             stats_output_path: 统计信息输出文件路径，如果指定则会将统计信息写入该文件（默认None）
-            success_per_template: 每个模版需要生成的成功查询数量（默认10）
+            success_per_template: 每一轮中每个模版最多生成的成功查询数量（默认20）
             realtime_output_path: 实时输出文件路径，如果指定则会在每次生成成功查询时立即写入文件（默认None）
         
         Returns:
@@ -2378,9 +2595,13 @@ class QueryGenerator:
             self.initialize()
         
         target = target_count or self.get_target_sample_count()
-        max_attempts = target * max_attempts_multiplier
+        max_attempts = None if max_attempts_multiplier is None else target * max_attempts_multiplier
         
-        logger.info(f"开始采样，目标数量: {target}, 最大尝试次数: {max_attempts}, 每个模版成功数量: {success_per_template}")
+        logger.info(
+            f"开始采样，目标数量: {target}, "
+            f"最大尝试次数: {max_attempts if max_attempts is not None else '无限制'}, "
+            f"每个模版成功数量: {success_per_template}"
+        )
         
         # 获取可用模版
         usable_templates = self.matcher.get_usable_templates(self.template_loader.templates)
@@ -2410,164 +2631,221 @@ class QueryGenerator:
                 'usage_count': 0,  # 使用次数
                 'success_count': 0,  # 成功次数
                 'failure_count': 0,  # 连续失败次数
+                'timeout_count': 0,  # 超时次数（独立计数，快速跳过超时模版）
                 'last_attempt_failed': False
             }
             for template in usable_templates
         }
         
-        # 按顺序遍历每个模版（使用 try-finally 确保文件正确关闭）
+        # 按轮次循环遍历模版（使用 try-finally 确保文件正确关闭）
         try:
-            for template in usable_templates:
-                # 如果已达到目标数量或超过最大尝试次数，停止
-                if len(self.results) >= target or attempts >= max_attempts:
-                    break
-                
-                stats_key = (template.type or 'unknown', template.id)
-                stats = template_stats[stats_key]
-                
-                logger.info(f"开始处理模版 [{stats['template_type']}] {template.id}，目标成功数量: {success_per_template}")
-                
-                # 对当前模版连续采样，直到生成指定数量的成功查询
-                while stats['success_count'] < success_per_template:
-                    # 检查是否达到全局限制
-                    if len(self.results) >= target or attempts >= max_attempts:
+            round_idx = 0
+            while len(self.results) < target and (max_attempts is None or attempts < max_attempts):
+                round_idx += 1
+                round_successes = 0
+                active_templates = 0
+                logger.info(f"开始第 {round_idx} 轮模版采样")
+
+                for template in usable_templates:
+                    # 如果已达到目标数量或超过最大尝试次数，停止
+                    if len(self.results) >= target or (max_attempts is not None and attempts >= max_attempts):
                         break
-                    
-                    # 检查是否超过最大失败次数
+
+                    stats_key = (template.type or 'unknown', template.id)
+                    stats = template_stats[stats_key]
+
+                    # 连续失败过多或超时过多的模板不再参与后续轮次
                     if stats['failure_count'] >= max_failures_per_template:
-                        logger.warning(f"模版 [{stats['template_type']}] {template.id} 连续失败 {stats['failure_count']} 次，跳过该模版")
-                        break
-                    
-                    attempts += 1
-                    stats['usage_count'] += 1
-                    
-                    # 构建查询
-                    query, params_used = self.builder.build_query(template)
-                    if not query:
-                        stats['failure_count'] += 1
-                        stats['last_attempt_failed'] = True
                         continue
-                    
-                    # 执行查询
-                    success, answer, error = self.executor.execute(query)
-                    
-                    # 过滤查询结果
-                    if success:
-                        # 1. 如果查询结果为空，抛弃这个查询
-                        if not answer:
+                    if stats['timeout_count'] >= max_timeouts_per_template:
+                        continue
+
+                    active_templates += 1
+                    round_template_success = 0
+
+                    logger.info(
+                        f"处理模版 [{stats['template_type']}] {template.id}，"
+                        f"本轮目标成功数量: {success_per_template}"
+                    )
+
+                    # 当前轮次内，对该模版连续采样，直到生成指定数量的成功查询
+                    while round_template_success < success_per_template:
+                        # 检查是否达到全局限制
+                        if len(self.results) >= target or (max_attempts is not None and attempts >= max_attempts):
+                            break
+
+                        # 检查是否超过最大失败次数或超时次数
+                        if stats['failure_count'] >= max_failures_per_template:
+                            logger.warning(
+                                f"模版 [{stats['template_type']}] {template.id} "
+                                f"连续失败 {stats['failure_count']} 次，跳过后续轮次"
+                            )
+                            break
+                        if stats['timeout_count'] >= max_timeouts_per_template:
+                            logger.warning(
+                                f"模版 [{stats['template_type']}] {template.id} "
+                                f"超时 {stats['timeout_count']} 次，跳过后续轮次"
+                            )
+                            break
+
+                        attempts += 1
+                        stats['usage_count'] += 1
+
+                        # 构建查询
+                        query, params_used = self.builder.build_query(template)
+                        if not query:
                             stats['failure_count'] += 1
                             stats['last_attempt_failed'] = True
-                            logger.debug(f"查询结果为空，抛弃查询: [{stats['template_type']}] {template.id}")
                             continue
-                        
-                        # 2. 排除所有值都是 null 的记录
-                        filtered_answer = []
-                        for record in answer:
-                            # 检查记录中是否有至少一个非 null 的值
-                            has_non_null = any(value is not None for value in record.values())
-                            
-                            # 如果记录中至少有一个非 null 值，则保留该记录（保留所有字段，包括 null 值）
-                            if has_non_null:
-                                filtered_answer.append(record)
-                        
-                        # 如果过滤后结果为空，抛弃这个查询
-                        if not filtered_answer:
-                            stats['failure_count'] += 1
-                            stats['last_attempt_failed'] = True
-                            logger.debug(f"过滤后查询结果为空，抛弃查询: [{stats['template_type']}] {template.id}")
-                            continue
-                        
-                        # 3. 检查是否所有 count 类型的结果都为 0
-                        # 常见的 count 字段名：cnt, count, total 等
-                        count_fields = ['cnt', 'count', 'total', 'num', 'number']
-                        
-                        # 检查是否所有记录的 count 字段都为 0
-                        all_counts_zero = True
-                        has_count_field = False
-                        
-                        for record in filtered_answer:
-                            for field in count_fields:
-                                if field in record:
-                                    has_count_field = True
-                                    # 如果找到任何一个非零的 count 值，标记为 False
-                                    if record[field] is not None and record[field] != 0:
-                                        all_counts_zero = False
-                                        break
-                            if not all_counts_zero:
-                                break
-                        
-                        # 如果存在 count 字段且所有值都为 0，抛弃查询
-                        if has_count_field and all_counts_zero:
-                            stats['failure_count'] += 1
-                            stats['last_attempt_failed'] = True
-                            logger.debug(f"查询结果的计数值全为0，抛弃查询: [{stats['template_type']}] {template.id}")
-                            continue
-                        
-                        # 4. 如果答案数量超过阈值，抛弃这个查询
-                        if len(filtered_answer) > max_answer_count:
-                            stats['failure_count'] += 1
-                            stats['last_attempt_failed'] = True
-                            logger.debug(f"查询结果数量 ({len(filtered_answer)}) 超过阈值 ({max_answer_count})，抛弃查询: [{stats['template_type']}] {template.id}")
-                            continue
-                        
-                        # 结果通过所有过滤条件，添加到结果列表
-                        result = QueryResult(
-                            template_id=template.id,
-                            template_type=template.type,
-                            query=query,
-                            parameters_used=params_used,
-                            answer=filtered_answer,
-                            success=True,
-                            error_message=None
+
+                        # 执行查询
+                        success, answer, error = self.executor.execute(query)
+
+                        # 过滤查询结果
+                        if success:
+                            # 1. 如果查询结果为空，抛弃这个查询
+                            if not answer:
+                                stats['failure_count'] += 1
+                                stats['last_attempt_failed'] = True
+                                logger.debug(f"查询结果为空，抛弃查询: [{stats['template_type']}] {template.id}")
+                                continue
+
+                            # 2. 排除所有值都是 null 的记录
+                            filtered_answer = []
+                            for record in answer:
+                                # 检查记录中是否有至少一个非 null 的值
+                                has_non_null = any(value is not None for value in record.values())
+
+                                # 如果记录中至少有一个非 null 值，则保留该记录（保留所有字段，包括 null 值）
+                                if has_non_null:
+                                    filtered_answer.append(record)
+
+                            # 如果过滤后结果为空，抛弃这个查询
+                            if not filtered_answer:
+                                stats['failure_count'] += 1
+                                stats['last_attempt_failed'] = True
+                                logger.debug(f"过滤后查询结果为空，抛弃查询: [{stats['template_type']}] {template.id}")
+                                continue
+
+                            # 3. 检查是否所有 count 类型的结果都为 0
+                            # 常见的 count 字段名：cnt, count, total 等
+                            count_fields = ['cnt', 'count', 'total', 'num', 'number']
+
+                            # 检查是否所有记录的 count 字段都为 0
+                            all_counts_zero = True
+                            has_count_field = False
+
+                            for record in filtered_answer:
+                                for field in count_fields:
+                                    if field in record:
+                                        has_count_field = True
+                                        # 如果找到任何一个非零的 count 值，标记为 False
+                                        if record[field] is not None and record[field] != 0:
+                                            all_counts_zero = False
+                                            break
+                                if not all_counts_zero:
+                                    break
+
+                            # 如果存在 count 字段且所有值都为 0，抛弃查询
+                            if has_count_field and all_counts_zero:
+                                stats['failure_count'] += 1
+                                stats['last_attempt_failed'] = True
+                                logger.debug(f"查询结果的计数值全为0，抛弃查询: [{stats['template_type']}] {template.id}")
+                                continue
+
+                            # 4. 如果答案数量超过阈值，抛弃这个查询
+                            if len(filtered_answer) > max_answer_count:
+                                stats['failure_count'] += 1
+                                stats['last_attempt_failed'] = True
+                                logger.debug(f"查询结果数量 ({len(filtered_answer)}) 超过阈值 ({max_answer_count})，抛弃查询: [{stats['template_type']}] {template.id}")
+                                continue
+
+                            # 结果通过所有过滤条件，添加到结果列表
+                            result = QueryResult(
+                                template_id=template.id,
+                                template_type=template.type,
+                                query=query,
+                                parameters_used=params_used,
+                                answer=filtered_answer,
+                                success=True,
+                                error_message=None
+                            )
+
+                            self.results.append(result)
+                            stats['success_count'] += 1
+                            round_template_success += 1
+                            round_successes += 1
+                            stats['failure_count'] = 0  # 重置连续失败计数
+                            stats['last_attempt_failed'] = False
+
+                            # 实时写入文件
+                            if realtime_file:
+                                # 格式化输出数据
+                                template_type = result.template_type or "unknown"
+                                template_id_with_prefix = f"{template_type}_{result.template_id}"
+                                output_data = {
+                                    "template_id": template_id_with_prefix,
+                                    "template_type": result.template_type,
+                                    "query": result.query,
+                                    "parameters": result.parameters_used,
+                                    "answer": result.answer
+                                }
+                                # 如果不是第一个结果，先写逗号
+                                if realtime_count > 0:
+                                    realtime_file.write(',\n')
+                                # 写入 JSON 对象（使用 indent=2 保持格式一致）
+                                json_str = json.dumps(output_data, ensure_ascii=False, indent=2, default=str)
+                                # 将多行 JSON 的每行都缩进，使其在数组中正确对齐
+                                # 跳过空行，只对非空行添加缩进
+                                indented_lines = []
+                                for line in json_str.split('\n'):
+                                    if line.strip():  # 非空行
+                                        indented_lines.append('  ' + line)
+                                    else:  # 空行保持原样
+                                        indented_lines.append(line)
+                                indented_json = '\n'.join(indented_lines)
+                                realtime_file.write(indented_json)
+                                realtime_file.flush()  # 立即刷新到磁盘
+                                realtime_count += 1
+
+                            logger.info(
+                                f"成功生成查询 [{len(self.results)}/{target}]: "
+                                f"[{stats['template_type']}] {template.id} "
+                                f"(本轮模版成功: {round_template_success}/{success_per_template}, "
+                                f"累计成功: {stats['success_count']}, 使用次数: {stats['usage_count']}, "
+                                f"结果数量: {len(filtered_answer)})"
+                            )
+                        else:
+                            if error and '超时' in error:
+                                stats['timeout_count'] += 1
+                                logger.warning(
+                                    f"查询超时 (模版: [{stats['template_type']}] {template.id}, "
+                                    f"累计超时: {stats['timeout_count']}/{max_timeouts_per_template})"
+                                )
+                            else:
+                                stats['failure_count'] += 1
+                                stats['last_attempt_failed'] = True
+                                logger.debug(f"查询失败: {error} (模版: [{stats['template_type']}] {template.id}, 连续失败: {stats['failure_count']})")
+
+                    # 完成当前模版本轮采样
+                    if round_template_success > 0:
+                        logger.info(
+                            f"模版 [{stats['template_type']}] {template.id} 本轮完成，"
+                            f"成功生成 {round_template_success} 个查询，累计成功 {stats['success_count']} 个"
                         )
-                        
-                        self.results.append(result)
-                        stats['success_count'] += 1
-                        stats['failure_count'] = 0  # 重置连续失败计数
-                        stats['last_attempt_failed'] = False
-                        
-                        # 实时写入文件
-                        if realtime_file:
-                            # 格式化输出数据
-                            template_type = result.template_type or "unknown"
-                            template_id_with_prefix = f"{template_type}_{result.template_id}"
-                            output_data = {
-                                "template_id": template_id_with_prefix,
-                                "template_type": result.template_type,
-                                "query": result.query,
-                                "parameters": result.parameters_used,
-                                "answer": result.answer
-                            }
-                            # 如果不是第一个结果，先写逗号
-                            if realtime_count > 0:
-                                realtime_file.write(',\n')
-                            # 写入 JSON 对象（使用 indent=2 保持格式一致）
-                            json_str = json.dumps(output_data, ensure_ascii=False, indent=2, default=str)
-                            # 将多行 JSON 的每行都缩进，使其在数组中正确对齐
-                            # 跳过空行，只对非空行添加缩进
-                            indented_lines = []
-                            for line in json_str.split('\n'):
-                                if line.strip():  # 非空行
-                                    indented_lines.append('  ' + line)
-                                else:  # 空行保持原样
-                                    indented_lines.append(line)
-                            indented_json = '\n'.join(indented_lines)
-                            realtime_file.write(indented_json)
-                            realtime_file.flush()  # 立即刷新到磁盘
-                            realtime_count += 1
-                        
-                        logger.info(f"成功生成查询 [{len(self.results)}/{target}]: [{stats['template_type']}] {template.id} "
-                                  f"(模版成功: {stats['success_count']}/{success_per_template}, 使用次数: {stats['usage_count']}, 结果数量: {len(filtered_answer)})")
-                    else:
-                        stats['failure_count'] += 1
-                        stats['last_attempt_failed'] = True
-                        logger.debug(f"查询失败: {error} (模版: [{stats['template_type']}] {template.id}, 连续失败: {stats['failure_count']})")
-                
-                # 完成当前模版
-                if stats['success_count'] >= success_per_template:
-                    logger.info(f"模版 [{stats['template_type']}] {template.id} 已完成，成功生成 {stats['success_count']} 个查询")
-                elif stats['failure_count'] >= max_failures_per_template:
-                    logger.warning(f"模版 [{stats['template_type']}] {template.id} 因连续失败过多而跳过，成功生成 {stats['success_count']} 个查询")
+                    elif stats['failure_count'] >= max_failures_per_template:
+                        logger.warning(
+                            f"模版 [{stats['template_type']}] {template.id} 因连续失败过多而跳过后续轮次，"
+                            f"累计成功 {stats['success_count']} 个查询"
+                        )
+
+                if active_templates == 0:
+                    logger.warning("所有模版都因连续失败过多而停止，提前结束采样")
+                    break
+
+                if round_successes == 0:
+                    logger.warning(f"第 {round_idx} 轮没有生成任何新查询，提前结束采样")
+                    break
         finally:
             # 确保实时输出文件总是被正确关闭
             if realtime_file:
@@ -2830,7 +3108,13 @@ class QueryGenerator:
                             
                             for param_name, value in params.items():
                                 # 替换模版中的参数
-                                if param_name == 'VALUE' or param_name in ('VAL', 'FILTER_VAL', 'NODE_VALUE', 'START_VALUE', 'V','NEW_V' 'AID', 'BID', 'CID', 'ID', 'ID1', 'ID2', 'VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5'):
+                                if param_name == 'VALUE' or param_name in (
+                                    'VAL', 'FILTER_VAL', 'NODE_VALUE', 'START_VALUE',
+                                    'Val', 'Val1', 'Val2', 'Val3', 'Val4', 'Val5',
+                                    'StartVal', 'NumVal', 'NEW_V',
+                                    'AID', 'BID', 'CID', 'ID', 'ID1', 'ID2',
+                                    'VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5',
+                                ):
                                     if isinstance(value, str):
                                         replacement = f"'{value}'"
                                     else:
@@ -2943,6 +3227,3 @@ class QueryGenerator:
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-
-

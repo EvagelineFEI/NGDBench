@@ -34,20 +34,20 @@
         "difficulty": 2,
         "title": "批量更新关系属性并验证过滤聚合（每行不同边与值）",
         "template": [
-          "MATCH (a {$PROP_ID1: $AID1})-[r:$R]->(b {$PROP_ID2: $BID1}) SET r.$RP = $VALUE1",
-          "MATCH (a {$PROP_ID1: $AID2})-[r:$R]->(b {$PROP_ID2: $BID2}) SET r.$RP = $VALUE2",
-          "MATCH (a {$PROP_ID1: $AID3})-[r:$R]->(b {$PROP_ID2: $BID3}) SET r.$RP = $VALUE3",
-          "MATCH (a {$PROP_ID1: $AID4})-[r:$R]->(b {$PROP_ID2: $BID4}) SET r.$RP = $VALUE4",
-          "MATCH (a {$PROP_ID1: $AID5})-[r:$R]->(b {$PROP_ID2: $BID5}) SET r.$RP = $VALUE5"
+          "MATCH (a {$PROP_ID1: $AID1})-[r:$Rel]->(b {$PROP_ID2: $BID1}) SET r.$RelProp = $VALUE1",
+          "MATCH (a {$PROP_ID1: $AID2})-[r:$Rel]->(b {$PROP_ID2: $BID2}) SET r.$RelProp = $VALUE2",
+          "MATCH (a {$PROP_ID1: $AID3})-[r:$Rel]->(b {$PROP_ID2: $BID3}) SET r.$RelProp = $VALUE3",
+          "MATCH (a {$PROP_ID1: $AID4})-[r:$Rel]->(b {$PROP_ID2: $BID4}) SET r.$RelProp = $VALUE4",
+          "MATCH (a {$PROP_ID1: $AID5})-[r:$Rel]->(b {$PROP_ID2: $BID5}) SET r.$RelProp = $VALUE5"
         ],
         "parameters": {
-          "R": "string",
-          "RP": "string",
-          "L1": "string",
-          "L2": "string",
+          "Rel": "string",
+          "RelProp": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "V": "integer",
+          "Val": "integer",
           "AID1": "string",
           "AID2": "string",
           "AID3": "string",
@@ -66,23 +66,23 @@
           "OP": "string"
         },
         "example": "批量更新多段关系的权重（每行不同边与值），直接查询修改后的关系属性验证是否读到修改后的值。",
-        "validation": "MATCH (a {$PROP_ID1: $AID1})-[r:$R]->(b {$PROP_ID2: $BID1}) RETURN r.$RP AS val"
+        "validation": "MATCH (a {$PROP_ID1: $AID1})-[r:$Rel]->(b {$PROP_ID2: $BID1}) RETURN r.$RelProp AS val"
       },
       {
         "difficulty": 3,
         "title": "批量更新属性并验证 Join 匹配变化（每行不同节点与值）",
         "template": [
-          "MATCH (n:$L1 {$PROP_ID: $VALUE1}) SET n.$P1 = $NEW_VAL1",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE2}) SET n.$P1 = $NEW_VAL2",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE3}) SET n.$P1 = $NEW_VAL3",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE4}) SET n.$P1 = $NEW_VAL4",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE5}) SET n.$P1 = $NEW_VAL5"
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) SET n.$Prop1 = $NEW_VAL1",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE2}) SET n.$Prop1 = $NEW_VAL2",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE3}) SET n.$Prop1 = $NEW_VAL3",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE4}) SET n.$Prop1 = $NEW_VAL4",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE5}) SET n.$Prop1 = $NEW_VAL5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -96,25 +96,25 @@
           "NEW_VAL5": "string"
         },
         "example": "批量修改多个节点的 Join 关联字段，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L1 {$PROP_ID: $VALUE1}) RETURN n.$P1 AS val"
+        "validation": "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) RETURN n.$Prop1 AS val"
       },
       {
         "difficulty": 4,
         "title": "批量更新属性并验证路径链条末端聚合（每行不同节点与值）",
         "template": [
-          "MATCH (n:$L3 {$PROP_ID: $VALUE1}) SET n.$P = $VAL1",
-          "MATCH (n:$L3 {$PROP_ID: $VALUE2}) SET n.$P = $VAL2",
-          "MATCH (n:$L3 {$PROP_ID: $VALUE3}) SET n.$P = $VAL3",
-          "MATCH (n:$L3 {$PROP_ID: $VALUE4}) SET n.$P = $VAL4",
-          "MATCH (n:$L3 {$PROP_ID: $VALUE5}) SET n.$P = $VAL5"
+          "MATCH (n:$Label3 {$PROP_ID: $VALUE1}) SET n.$Prop = $VAL1",
+          "MATCH (n:$Label3 {$PROP_ID: $VALUE2}) SET n.$Prop = $VAL2",
+          "MATCH (n:$Label3 {$PROP_ID: $VALUE3}) SET n.$Prop = $VAL3",
+          "MATCH (n:$Label3 {$PROP_ID: $VALUE4}) SET n.$Prop = $VAL4",
+          "MATCH (n:$Label3 {$PROP_ID: $VALUE5}) SET n.$Prop = $VAL5"
         ],
         "parameters": {
-          "R1": "string",
-          "R2": "string",
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "P": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Prop": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -128,23 +128,23 @@
           "VAL5": "integer"
         },
         "example": "批量更新链条末端节点的数值，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L3 {$PROP_ID: $VALUE1}) RETURN n.$P AS val"
+        "validation": "MATCH (n:$Label3 {$PROP_ID: $VALUE1}) RETURN n.$Prop AS val"
       },
       {
         "difficulty": 5,
         "title": "批量更新属性并验证嵌套循环引用（每行不同节点与值）",
         "template": [
-          "MATCH (n:$L1 {$PROP_ID: $VALUE1}) SET n.$P1 = $NEW_REF1",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE2}) SET n.$P1 = $NEW_REF2",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE3}) SET n.$P1 = $NEW_REF3",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE4}) SET n.$P1 = $NEW_REF4",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE5}) SET n.$P1 = $NEW_REF5"
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) SET n.$Prop1 = $NEW_REF1",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE2}) SET n.$Prop1 = $NEW_REF2",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE3}) SET n.$Prop1 = $NEW_REF3",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE4}) SET n.$Prop1 = $NEW_REF4",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE5}) SET n.$Prop1 = $NEW_REF5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -158,24 +158,24 @@
           "NEW_REF5": "string"
         },
         "example": "批量修改多个节点的引用键，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L1 {$PROP_ID: $VALUE1}) RETURN n.$P1 AS val"
+        "validation": "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) RETURN n.$Prop1 AS val"
       },
       {
         "difficulty": 6,
         "title": "批量更新属性并验证 OR 条件下的计数（每行不同节点与值）",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}) SET n.$P = $NEW_V1",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}) SET n.$P = $NEW_V2",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}) SET n.$P = $NEW_V3",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}) SET n.$P = $NEW_V4",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}) SET n.$P = $NEW_V5"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}) SET n.$Prop = $NEW_V1",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}) SET n.$Prop = $NEW_V2",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}) SET n.$Prop = $NEW_V3",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}) SET n.$Prop = $NEW_V4",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}) SET n.$Prop = $NEW_V5"
         ],
         "parameters": {
-          "R": "string",
-          "L2": "string",
-          "P": "string",
+          "Rel": "string",
+          "Label2": "string",
+          "Prop": "string",
           "PROP_ID": "string",
-          "V": "integer",
+          "Val": "integer",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -186,24 +186,24 @@
           "NEW_V3": "integer",
           "NEW_V4": "integer",
           "NEW_V5": "integer",
-          "L": "string",
+          "Label": "string",
           "OP": "string"
         },
         "example": "批量更新多个节点的属性，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L {$PROP_ID: $VALUE1}) RETURN n.$P AS val"
+        "validation": "MATCH (n:$Label {$PROP_ID: $VALUE1}) RETURN n.$Prop AS val"
       },
       {
         "difficulty": 7,
         "title": "批量更新属性并验证属性值变化（每行不同节点与值）",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}) SET n.$P = $VAL1",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}) SET n.$P = $VAL2",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}) SET n.$P = $VAL3",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}) SET n.$P = $VAL4",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}) SET n.$P = $VAL5"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}) SET n.$Prop = $VAL1",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}) SET n.$Prop = $VAL2",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}) SET n.$Prop = $VAL3",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}) SET n.$Prop = $VAL4",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}) SET n.$Prop = $VAL5"
         ],
         "parameters": {
-          "P": "string",
+          "Prop": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -215,25 +215,25 @@
           "VAL3": "integer",
           "VAL4": "integer",
           "VAL5": "integer",
-          "L": "string"
+          "Label": "string"
         },
         "example": "批量更新多个节点的属性值，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L {$PROP_ID: $VALUE1}) RETURN n.$P AS val"
+        "validation": "MATCH (n:$Label {$PROP_ID: $VALUE1}) RETURN n.$Prop AS val"
       },
       {
         "difficulty": 8,
         "title": "批量更新标签并验证变长路径计数（每行不同节点）",
         "template": [
-          "MATCH (n {$PROP_ID: $VALUE1}) SET n:$L2",
-          "MATCH (n {$PROP_ID: $VALUE2}) SET n:$L2",
-          "MATCH (n {$PROP_ID: $VALUE3}) SET n:$L2",
-          "MATCH (n {$PROP_ID: $VALUE4}) SET n:$L2",
-          "MATCH (n {$PROP_ID: $VALUE5}) SET n:$L2"
+          "MATCH (n {$PROP_ID: $VALUE1}) SET n:$Label2",
+          "MATCH (n {$PROP_ID: $VALUE2}) SET n:$Label2",
+          "MATCH (n {$PROP_ID: $VALUE3}) SET n:$Label2",
+          "MATCH (n {$PROP_ID: $VALUE4}) SET n:$Label2",
+          "MATCH (n {$PROP_ID: $VALUE5}) SET n:$Label2"
         ],
         "parameters": {
-          "R": "string",
-          "L1": "string",
-          "L2": "string",
+          "Rel": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -244,24 +244,24 @@
           "MAX_HOPS": "integer"
         },
         "example": "为多个不同节点添加新标签，验证其作为变长路径终点的可达性总数。",
-        "validation": "MATCH (a:$L1)-[:$R *$MIN_HOPS..$MAX_HOPS]-(b:$L2) RETURN count(b) AS cnt"
+        "validation": "MATCH (a:$Label1)-[:$Rel *$MIN_HOPS..$MAX_HOPS]-(b:$Label2) RETURN count(b) AS cnt"
       },
       {
         "difficulty": 9,
         "title": "批量更新属性并验证 Join 后的聚合阈值（每行不同节点与值）",
         "template": [
-          "MATCH (n:$L2 {$PROP_ID: $VALUE1}) SET n.$BP = $VAL1",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE2}) SET n.$BP = $VAL2",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE3}) SET n.$BP = $VAL3",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE4}) SET n.$BP = $VAL4",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE5}) SET n.$BP = $VAL5"
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE1}) SET n.$BaseProp = $VAL1",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE2}) SET n.$BaseProp = $VAL2",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE3}) SET n.$BaseProp = $VAL3",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE4}) SET n.$BaseProp = $VAL4",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE5}) SET n.$BaseProp = $VAL5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
-          "BP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
+          "BaseProp": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -276,22 +276,22 @@
           "THRESHOLD": "integer"
         },
         "example": "批量修改多个 Join 目标的数值，验证主节点是否因关联平均值达标而进入结果。",
-        "validation": "MATCH (a:$L1), (b:$L2) WHERE a.$P1 = b.$P2 WITH a, avg(b.$BP) AS avg_b WHERE avg_b > $THRESHOLD RETURN count(a) AS cnt"
+        "validation": "MATCH (a:$Label1), (b:$Label2) WHERE a.$Prop1 = b.$Prop2 WITH a, avg(b.$BaseProp) AS avg_b WHERE avg_b > $THRESHOLD RETURN count(a) AS cnt"
       },
       {
         "difficulty": 10,
         "title": "批量创建关系并验证变长路径平均长度（每行不同节点对）",
         "template": [
-          "MATCH (a {$PROP_ID1: $AID1}), (b {$PROP_ID2: $BID1}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a {$PROP_ID1: $AID2}), (b {$PROP_ID2: $BID2}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a {$PROP_ID1: $AID3}), (b {$PROP_ID2: $BID3}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a {$PROP_ID1: $AID4}), (b {$PROP_ID2: $BID4}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a {$PROP_ID1: $AID5}), (b {$PROP_ID2: $BID5}) CREATE (a)-[:$R]->(b)"
+          "MATCH (a {$PROP_ID1: $AID1}), (b {$PROP_ID2: $BID1}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a {$PROP_ID1: $AID2}), (b {$PROP_ID2: $BID2}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a {$PROP_ID1: $AID3}), (b {$PROP_ID2: $BID3}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a {$PROP_ID1: $AID4}), (b {$PROP_ID2: $BID4}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a {$PROP_ID1: $AID5}), (b {$PROP_ID2: $BID5}) CREATE (a)-[:$Rel]->(b)"
         ],
         "parameters": {
-          "R": "string",
-          "L1": "string",
-          "L2": "string",
+          "Rel": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
           "AID1": "string",
@@ -308,23 +308,23 @@
           "MAX_HOPS": "integer"
         },
         "example": "批量创建多段新关系（每行不同节点对），验证特定标签间变长路径的平均跳数变化，避免重复边。",
-        "validation": "MATCH p = (a:$L1)-[:$R *$MIN_HOPS..$MAX_HOPS]-(b:$L2) RETURN avg(length(p)) AS avg_len"
+        "validation": "MATCH p = (a:$Label1)-[:$Rel *$MIN_HOPS..$MAX_HOPS]-(b:$Label2) RETURN avg(length(p)) AS avg_len"
       },
       {
         "difficulty": 11,
         "title": "批量更新属性并验证无关标签的总和（每行不同节点与值）",
         "template": [
-          "MATCH (n:$L1 {$PROP_ID: $VALUE1}) SET n.$P1 = $VAL1",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE2}) SET n.$P1 = $VAL2",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE3}) SET n.$P1 = $VAL3",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE4}) SET n.$P1 = $VAL4",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE5}) SET n.$P1 = $VAL5"
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) SET n.$Prop1 = $VAL1",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE2}) SET n.$Prop1 = $VAL2",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE3}) SET n.$Prop1 = $VAL3",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE4}) SET n.$Prop1 = $VAL4",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE5}) SET n.$Prop1 = $VAL5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -338,27 +338,27 @@
           "VAL5": "integer"
         },
         "example": "批量更新多个节点属性后，验证其他无关标签的数值总和是否保持稳定。",
-        "validation": "MATCH (a:$L2) RETURN sum(a.$P2) AS total"
+        "validation": "MATCH (a:$Label2) RETURN sum(a.$Prop2) AS total"
       },
       {
         "difficulty": 12,
         "title": "批量更新属性并验证无关关系的过滤计数（每行不同边与值）",
         "template": [
-          "MATCH (a {$PROP_ID1: $AID1})-[r:$R1]->(b {$PROP_ID2: $BID1}) SET r.$RP = $VALUE1",
-          "MATCH (a {$PROP_ID1: $AID2})-[r:$R1]->(b {$PROP_ID2: $BID2}) SET r.$RP = $VALUE2",
-          "MATCH (a {$PROP_ID1: $AID3})-[r:$R1]->(b {$PROP_ID2: $BID3}) SET r.$RP = $VALUE3",
-          "MATCH (a {$PROP_ID1: $AID4})-[r:$R1]->(b {$PROP_ID2: $BID4}) SET r.$RP = $VALUE4",
-          "MATCH (a {$PROP_ID1: $AID5})-[r:$R1]->(b {$PROP_ID2: $BID5}) SET r.$RP = $VALUE5"
+          "MATCH (a {$PROP_ID1: $AID1})-[r:$Rel1]->(b {$PROP_ID2: $BID1}) SET r.$RelProp = $VALUE1",
+          "MATCH (a {$PROP_ID1: $AID2})-[r:$Rel1]->(b {$PROP_ID2: $BID2}) SET r.$RelProp = $VALUE2",
+          "MATCH (a {$PROP_ID1: $AID3})-[r:$Rel1]->(b {$PROP_ID2: $BID3}) SET r.$RelProp = $VALUE3",
+          "MATCH (a {$PROP_ID1: $AID4})-[r:$Rel1]->(b {$PROP_ID2: $BID4}) SET r.$RelProp = $VALUE4",
+          "MATCH (a {$PROP_ID1: $AID5})-[r:$Rel1]->(b {$PROP_ID2: $BID5}) SET r.$RelProp = $VALUE5"
         ],
         "parameters": {
-          "R1": "string",
-          "R2": "string",
-          "RP": "string",
-          "L3": "string",
-          "L4": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "RelProp": "string",
+          "Label3": "string",
+          "Label4": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "V": "integer",
+          "Val": "integer",
           "AID1": "string",
           "AID2": "string",
           "AID3": "string",
@@ -377,25 +377,25 @@
           "OP": "string"
         },
         "example": "批量更新多段关系的属性后，直接查询修改后的关系属性验证是否读到修改后的值。",
-        "validation": "MATCH (a {$PROP_ID1: $AID1})-[r:$R1]->(b {$PROP_ID2: $BID1}) RETURN r.$RP AS val"
+        "validation": "MATCH (a {$PROP_ID1: $AID1})-[r:$Rel1]->(b {$PROP_ID2: $BID1}) RETURN r.$RelProp AS val"
       },
       {
         "difficulty": 13,
         "title": "批量更新标签并验证无关路径的存在性（每行不同节点）",
         "template": [
-          "MATCH (n {$PROP_ID: $VALUE1}) SET n:$L2",
-          "MATCH (n {$PROP_ID: $VALUE2}) SET n:$L2",
-          "MATCH (n {$PROP_ID: $VALUE3}) SET n:$L2",
-          "MATCH (n {$PROP_ID: $VALUE4}) SET n:$L2",
-          "MATCH (n {$PROP_ID: $VALUE5}) SET n:$L2"
+          "MATCH (n {$PROP_ID: $VALUE1}) SET n:$Label2",
+          "MATCH (n {$PROP_ID: $VALUE2}) SET n:$Label2",
+          "MATCH (n {$PROP_ID: $VALUE3}) SET n:$Label2",
+          "MATCH (n {$PROP_ID: $VALUE4}) SET n:$Label2",
+          "MATCH (n {$PROP_ID: $VALUE5}) SET n:$Label2"
         ],
         "parameters": {
-          "R2": "string",
-          "R3": "string",
-          "L2": "string",
-          "L3": "string",
-          "L4": "string",
-          "L5": "string",
+          "Rel2": "string",
+          "Rel3": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Label4": "string",
+          "Label5": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -404,7 +404,7 @@
           "VALUE5": "string"
         },
         "example": "批量更新多个节点的标签后，验证其他无关路径链的存在性是否保持稳定。",
-        "validation": "MATCH (a:$L3)-[:$R2]->(b:$L4)-[:$R3]->(c:$L5) RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label3)-[:$Rel2]->(b:$Label4)-[:$Rel3]->(c:$Label5) RETURN count(*) AS cnt"
       },
       {
         "difficulty": 14,
@@ -438,17 +438,17 @@
         "difficulty": 15,
         "title": "批量更新关系属性（不同数值）并验证过滤计数",
         "template": [
-          "MATCH (a {$PROP_ID1: $AID1})-[r:$R]->(b {$PROP_ID2: $BID1}) SET r.$RP = $VAL1",
-          "MATCH (a {$PROP_ID1: $AID2})-[r:$R]->(b {$PROP_ID2: $BID2}) SET r.$RP = $VAL2",
-          "MATCH (a {$PROP_ID1: $AID3})-[r:$R]->(b {$PROP_ID2: $BID3}) SET r.$RP = $VAL3",
-          "MATCH (a {$PROP_ID1: $AID4})-[r:$R]->(b {$PROP_ID2: $BID4}) SET r.$RP = $VAL4",
-          "MATCH (a {$PROP_ID1: $AID5})-[r:$R]->(b {$PROP_ID2: $BID5}) SET r.$RP = $VAL5"
+          "MATCH (a {$PROP_ID1: $AID1})-[r:$Rel]->(b {$PROP_ID2: $BID1}) SET r.$RelProp = $VAL1",
+          "MATCH (a {$PROP_ID1: $AID2})-[r:$Rel]->(b {$PROP_ID2: $BID2}) SET r.$RelProp = $VAL2",
+          "MATCH (a {$PROP_ID1: $AID3})-[r:$Rel]->(b {$PROP_ID2: $BID3}) SET r.$RelProp = $VAL3",
+          "MATCH (a {$PROP_ID1: $AID4})-[r:$Rel]->(b {$PROP_ID2: $BID4}) SET r.$RelProp = $VAL4",
+          "MATCH (a {$PROP_ID1: $AID5})-[r:$Rel]->(b {$PROP_ID2: $BID5}) SET r.$RelProp = $VAL5"
         ],
         "parameters": {
-          "R": "string",
-          "RP": "string",
-          "L1": "string",
-          "L2": "string",
+          "Rel": "string",
+          "RelProp": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
           "AID1": "string",
@@ -469,7 +469,7 @@
           "THRESHOLD": "integer"
         },
         "example": "批量更新不同关系的属性为不同数值，直接查询修改后的关系属性验证是否读到修改后的值。",
-        "validation": "MATCH (a {$PROP_ID1: $AID1})-[r:$R]->(b {$PROP_ID2: $BID1}) RETURN r.$RP AS val"
+        "validation": "MATCH (a {$PROP_ID1: $AID1})-[r:$Rel]->(b {$PROP_ID2: $BID1}) RETURN r.$RelProp AS val"
       }
     ]
   },
@@ -609,8 +609,8 @@
         "title": "创建节点、建立多重关系、更新关系属性并删除节点",
         "template": [
           "CREATE (n:$LABEL {$PROP: $VALUE, $PROP_ID: $ID})",
-          "MATCH (n:$LABEL {$PROP_ID: $ID}), (t1:$L1 {$TARGET_PROP_ID1: $TARGET_ID1}) CREATE (n)-[:$REL1]->(t1)",
-          "MATCH (n:$LABEL {$PROP_ID: $ID}), (t2:$L2 {$TARGET_PROP_ID2: $TARGET_ID2}) CREATE (n)-[:$REL2]->(t2)",
+          "MATCH (n:$LABEL {$PROP_ID: $ID}), (t1:$Label1 {$TARGET_PROP_ID1: $TARGET_ID1}) CREATE (n)-[:$REL1]->(t1)",
+          "MATCH (n:$LABEL {$PROP_ID: $ID}), (t2:$Label2 {$TARGET_PROP_ID2: $TARGET_ID2}) CREATE (n)-[:$REL2]->(t2)",
           "MATCH (n:$LABEL {$PROP_ID: $ID})-[r:$REL1]->() SET r.$REL_PROP = $UPDATE_REL_VAL",
           "MATCH (n:$LABEL {$PROP_ID: $DELETE_ID}) DETACH DELETE n"
         ],
@@ -619,8 +619,8 @@
           "REL2": "string",
           "REL_PROP": "string",
           "LABEL": "string",
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP": "string",
           "PROP_ID": "string",
           "TARGET_PROP_ID1": "string",
@@ -740,18 +740,18 @@
         "difficulty": 2,
         "title": "批量删除关系并验证入度聚合（每行删除不同目标上的边）",
         "template": [
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE1}) DELETE r",
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE2}) DELETE r",
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE3}) DELETE r",
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE4}) DELETE r",
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE5}) DELETE r"
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE1}) DELETE r",
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE2}) DELETE r",
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE3}) DELETE r",
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE4}) DELETE r",
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE5}) DELETE r"
         ],
         "parameters": {
-          "L1": "string",
-          "P": "string",
+          "Label1": "string",
+          "Prop": "string",
           "PROP_ID": "string",
-          "R": "string",
-          "V": "string",
+          "Rel": "string",
+          "Val": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -759,23 +759,23 @@
           "VALUE5": "string"
         },
         "example": "批量删除指向不同节点的关系，直接查询剩余关系指向的节点属性验证删除后的图状态。",
-        "validation": "MATCH ()-[r:$R]->(b:$L1) RETURN b.$PROP_ID AS val"
+        "validation": "MATCH ()-[r:$Rel]->(b:$Label1) RETURN b.$PROP_ID AS val"
       },
       {
         "difficulty": 3,
         "title": "批量删除节点并验证 Join 匹配数（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L2 {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -784,26 +784,26 @@
           "VALUE5": "string"
         },
         "example": "删除一个参与 Join 的节点，直接查询剩余节点属性验证删除后的图状态。",
-        "validation": "MATCH (n:$L2) RETURN n.$PROP_ID AS val"
+        "validation": "MATCH (n:$Label2) RETURN n.$PROP_ID AS val"
       },
       {
         "difficulty": 4,
         "title": "批量删除关系并验证排他性查询（每行删除不同边）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $AID1})-[r:$R]->(b:$L2 {$PROP_ID2: $BID1}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID2})-[r:$R]->(b:$L2 {$PROP_ID2: $BID2}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID3})-[r:$R]->(b:$L2 {$PROP_ID2: $BID3}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID4})-[r:$R]->(b:$L2 {$PROP_ID2: $BID4}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID5})-[r:$R]->(b:$L2 {$PROP_ID2: $BID5}) DELETE r"
+          "MATCH (a:$Label1 {$PROP_ID1: $AID1})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID1}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID2})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID2}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID3})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID3}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID4})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID4}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID5})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID5}) DELETE r"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
-          "V": "string",
+          "Rel": "string",
+          "Val": "string",
           "AID1": "string",
           "AID2": "string",
           "AID3": "string",
@@ -816,24 +816,24 @@
           "BID5": "string"
         },
         "example": "批量删除多段关系（每行不同节点对），验证进入“未连接”状态的节点数量。",
-        "validation": "MATCH (a:$L1)-[r:$R]->(b:$L2) RETURN count(r) AS cnt"
+        "validation": "MATCH (a:$Label1)-[r:$Rel]->(b:$Label2) RETURN count(r) AS cnt"
       },
       {
         "difficulty": 5,
         "title": "批量删除路径并验证链条完整性（每行删除不同节点）",
         "template": [
-          "MATCH (b:$L2 {$PROP_ID: $VALUE1}) DETACH DELETE b",
-          "MATCH (b:$L2 {$PROP_ID: $VALUE2}) DETACH DELETE b",
-          "MATCH (b:$L2 {$PROP_ID: $VALUE3}) DETACH DELETE b",
-          "MATCH (b:$L2 {$PROP_ID: $VALUE4}) DETACH DELETE b",
-          "MATCH (b:$L2 {$PROP_ID: $VALUE5}) DETACH DELETE b"
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE1}) DETACH DELETE b",
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE2}) DETACH DELETE b",
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE3}) DETACH DELETE b",
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE4}) DETACH DELETE b",
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE5}) DETACH DELETE b"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "R1": "string",
-          "R2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -842,26 +842,26 @@
           "VALUE5": "string"
         },
         "example": "删除链条中间的节点，直接查询剩余节点属性验证删除后的图状态。",
-        "validation": "MATCH (b:$L2) RETURN b.$PROP_ID AS val"
+        "validation": "MATCH (b:$Label2) RETURN b.$PROP_ID AS val"
       },
       {
         "difficulty": 6,
         "title": "批量删除节点并验证 OR 逻辑下的聚合（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "NP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "NumProp": "string",
           "PROP_ID": "string",
-          "R1": "string",
-          "R2": "string",
-          "L": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "Label": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -869,7 +869,7 @@
           "VALUE5": "string"
         },
         "example": "批量删除多个不同节点，直接查询剩余节点属性验证删除后的图状态。",
-        "validation": "MATCH (n:$L) RETURN n.$PROP_ID AS val"
+        "validation": "MATCH (n:$Label) RETURN n.$PROP_ID AS val"
       },
       {
         "difficulty": 7,
@@ -882,10 +882,10 @@
           "MATCH (n {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID": "string",
-          "R": "string",
+          "Rel": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -901,43 +901,43 @@
         "difficulty": 8,
         "title": "批量删除节点并验证 Top-N 收集的位移（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "R": "string",
-          "GL": "string",
-          "P": "string",
-          "GP": "string",
+          "Rel": "string",
+          "GroupLabel": "string",
+          "Prop": "string",
+          "GroupProp": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
           "VALUE4": "string",
           "VALUE5": "string",
-          "L": "string"
+          "Label": "string"
         },
         "example": "批量删除多个节点，直接查询剩余节点属性验证删除后的图状态。",
-        "validation": "MATCH (g:$GL)<-[:$R]-(n:$L) RETURN n.$PROP_ID AS val"
+        "validation": "MATCH (g:$GroupLabel)<-[:$Rel]-(n:$Label) RETURN n.$PROP_ID AS val"
       },
       {
         "difficulty": 9,
         "title": "批量删除节点并验证跨标签 Join 阈值过滤（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L2 {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -947,7 +947,7 @@
           "THRESHOLD": "integer"
         },
         "example": "批量删除多个匹配项，验证是否有主节点因匹配数跌破阈值而从结果中消失。",
-        "validation": "MATCH (n:$L2) RETURN count(n) AS cnt"
+        "validation": "MATCH (n:$Label2) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 10,
@@ -960,16 +960,16 @@
           "MATCH (n {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "SL": "string",
-          "EL": "string",
+          "StartLabel": "string",
+          "EndLabel": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
           "VALUE4": "string",
           "VALUE5": "string",
-          "SP": "string",
-          "SV": "string",
+          "StartProp": "string",
+          "StartVal": "string",
           "MIN_HOPS": "integer",
           "MAX_HOPS": "integer"
         },
@@ -980,16 +980,16 @@
         "difficulty": 11,
         "title": "批量删除节点并验证无关标签的最小值（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L1 {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -998,25 +998,25 @@
           "VALUE5": "string"
         },
         "example": "批量删除多个节点后，验证其他无关标签的属性最小值是否保持稳定。",
-        "validation": "MATCH (n:$L1) RETURN count(n) AS cnt"
+        "validation": "MATCH (n:$Label1) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 12,
         "title": "批量删除关系并验证无关路径的计数（每行删除不同目标上的边）",
         "template": [
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE1}) DELETE r",
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE2}) DELETE r",
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE3}) DELETE r",
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE4}) DELETE r",
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE5}) DELETE r"
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE1}) DELETE r",
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE2}) DELETE r",
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE3}) DELETE r",
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE4}) DELETE r",
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE5}) DELETE r"
         ],
         "parameters": {
-          "L1": "string",
-          "L3": "string",
-          "L4": "string",
+          "Label1": "string",
+          "Label3": "string",
+          "Label4": "string",
           "PROP_ID": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -1024,22 +1024,22 @@
           "VALUE5": "string"
         },
         "example": "批量删除多段关系（每行不同目标节点）后，验证其他无关路径类型的数量是否保持不变。",
-        "validation": "MATCH ()-[r:$R1]->() RETURN count(r) AS cnt"
+        "validation": "MATCH ()-[r:$Rel1]->() RETURN count(r) AS cnt"
       },
       {
         "difficulty": 13,
         "title": "批量删除节点并验证无关标签的聚合统计（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L1 {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -1048,48 +1048,48 @@
           "VALUE5": "string"
         },
         "example": "批量删除多个不同节点后，验证其他无关标签的平均值和计数是否保持稳定。",
-        "validation": "MATCH (n:$L1) RETURN count(n) AS cnt"
+        "validation": "MATCH (n:$Label1) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 14,
         "title": "批量删除不同节点并验证分组成员数",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "R": "string",
-          "GL": "string",
+          "Rel": "string",
+          "GroupLabel": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
           "VALUE4": "string",
           "VALUE5": "string",
-          "L": "string"
+          "Label": "string"
         },
         "example": "批量删除多个不同节点，验证所属分组下成员数量的减少。",
-        "validation": "MATCH (g:$GL)<-[:$R]-(n:$L) RETURN count(n) AS cnt"
+        "validation": "MATCH (g:$GroupLabel)<-[:$Rel]-(n:$Label) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 15,
         "title": "批量删除不同关系并验证路径计数",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $AID1})-[r:$R]->(b:$L2 {$PROP_ID2: $BID1}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID2})-[r:$R]->(b:$L2 {$PROP_ID2: $BID2}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID3})-[r:$R]->(b:$L2 {$PROP_ID2: $BID3}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID4})-[r:$R]->(b:$L2 {$PROP_ID2: $BID4}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID5})-[r:$R]->(b:$L2 {$PROP_ID2: $BID5}) DELETE r"
+          "MATCH (a:$Label1 {$PROP_ID1: $AID1})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID1}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID2})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID2}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID3})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID3}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID4})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID4}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID5})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID5}) DELETE r"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
+          "Rel": "string",
           "AID1": "string",
           "AID2": "string",
           "AID3": "string",
@@ -1102,7 +1102,7 @@
           "BID5": "string"
         },
         "example": "批量删除多段关系（每行不同节点对），验证路径或链条数量的减少。",
-        "validation": "MATCH (a:$L1)-[:$R]->(b:$L2) RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label1)-[:$Rel]->(b:$Label2) RETURN count(*) AS cnt"
       }
     ]
   },
@@ -1141,20 +1141,20 @@
         "difficulty": 2,
         "title": "批量合并关系并验证扩展计数（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$R]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$Rel]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
-          "V": "string",
+          "Rel": "string",
+          "Val": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -1167,25 +1167,25 @@
           "ID2_5": "string"
         },
         "example": "批量合并多对节点的关系（每行不同节点对），验证起始节点的出度。",
-        "validation": "MATCH (n:$L1 {$P: $V})-[:$R]->(m) RETURN count(m) AS cnt"
+        "validation": "MATCH (n:$Label1 {$Prop: $Val})-[:$Rel]->(m) RETURN count(m) AS cnt"
       },
       {
         "difficulty": 3,
         "title": "批量合并关系并验证双重路径聚合（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$R2]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$R2]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$R2]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$R2]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$R2]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$Rel2]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$Rel2]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$Rel2]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$Rel2]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$Rel2]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -1198,25 +1198,25 @@
           "ID2_5": "string"
         },
         "example": "批量合并多对节点的新类型关系（每行不同节点对），验证同时拥有两种关系的对数。",
-        "validation": "MATCH (a:$L1)-[:$R1]->(b:$L2) MATCH (a)-[:$R2]->(b) RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label1)-[:$Rel1]->(b:$Label2) MATCH (a)-[:$Rel2]->(b) RETURN count(*) AS cnt"
       },
       {
         "difficulty": 4,
         "title": "批量合并并验证嵌套属性引用（每行不同节点与值）",
         "template": [
-          "MERGE (n:$L1 {$PROP_ID: $VALUE1}) SET n.$P1 = $NEW_REF1",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE2}) SET n.$P1 = $NEW_REF2",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE3}) SET n.$P1 = $NEW_REF3",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE4}) SET n.$P1 = $NEW_REF4",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE5}) SET n.$P1 = $NEW_REF5"
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE1}) SET n.$Prop1 = $NEW_REF1",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE2}) SET n.$Prop1 = $NEW_REF2",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE3}) SET n.$Prop1 = $NEW_REF3",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE4}) SET n.$Prop1 = $NEW_REF4",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE5}) SET n.$Prop1 = $NEW_REF5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
-          "V": "string",
+          "Val": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -1229,25 +1229,25 @@
           "NEW_REF5": "string"
         },
         "example": "批量合并更新多个节点的引用属性（每行不同节点与值），直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L1 {$PROP_ID: $VALUE1}) RETURN n.$P1 AS val"
+        "validation": "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) RETURN n.$Prop1 AS val"
       },
       {
         "difficulty": 5,
         "title": "批量合并关系并验证 OR 条件下节点计数（每行不同节点对）",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}), (m:$L2 {$PROP_ID: $MID1}) MERGE (n)-[:$R2]->(m)",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}), (m:$L2 {$PROP_ID: $MID2}) MERGE (n)-[:$R2]->(m)",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}), (m:$L2 {$PROP_ID: $MID3}) MERGE (n)-[:$R2]->(m)",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}), (m:$L2 {$PROP_ID: $MID4}) MERGE (n)-[:$R2]->(m)",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}), (m:$L2 {$PROP_ID: $MID5}) MERGE (n)-[:$R2]->(m)"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}), (m:$Label2 {$PROP_ID: $MID1}) MERGE (n)-[:$Rel2]->(m)",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}), (m:$Label2 {$PROP_ID: $MID2}) MERGE (n)-[:$Rel2]->(m)",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}), (m:$Label2 {$PROP_ID: $MID3}) MERGE (n)-[:$Rel2]->(m)",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}), (m:$Label2 {$PROP_ID: $MID4}) MERGE (n)-[:$Rel2]->(m)",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}), (m:$Label2 {$PROP_ID: $MID5}) MERGE (n)-[:$Rel2]->(m)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label": "string",
           "PROP_ID": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -1260,71 +1260,71 @@
           "MID5": "string"
         },
         "example": "批量合并多对关系（每行不同节点对），验证满足多重可选路径之一的节点总数。",
-        "validation": "MATCH (n:$L) WHERE (n)-[:$R1]->(:$L1) OR (n)-[:$R2]->(:$L2) RETURN count(n) AS cnt"
+        "validation": "MATCH (n:$Label) WHERE (n)-[:$Rel1]->(:$Label1) OR (n)-[:$Rel2]->(:$Label2) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 6,
         "title": "合并并验证三层链条的平均值",
         "template": [
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL",
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL",
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL",
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL",
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL"
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL",
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL",
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL",
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL",
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "R1": "string",
-          "R2": "string",
-          "P": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "Prop": "string",
           "PROP_ID": "string",
           "VAL": "integer",
           "VALUE": "string"
         },
         "example": "合并更新长链末端的属性，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L3 {$PROP_ID: $VALUE}) RETURN n.$P AS val"
+        "validation": "MATCH (n:$Label3 {$PROP_ID: $VALUE}) RETURN n.$Prop AS val"
       },
       {
         "difficulty": 7,
         "title": "合并并验证连接过滤后的 Top 收集",
         "template": [
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL"
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
-          "BP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
+          "BaseProp": "string",
           "PROP_ID": "string",
           "VALUE": "string",
           "NEW_VAL": "integer"
         },
         "example": "合并更新 Join 目标节点的属性，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L2 {$PROP_ID: $VALUE}) RETURN n.$BP AS val"
+        "validation": "MATCH (n:$Label2 {$PROP_ID: $VALUE}) RETURN n.$BaseProp AS val"
       },
       {
         "difficulty": 8,
         "title": "批量合并关系并验证变长路径计数（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$R]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$Rel]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
+          "Rel": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -1339,23 +1339,23 @@
           "MAX_HOPS": "integer"
         },
         "example": "批量合并多对关系（每行不同节点对），验证在指定跳数范围内可达节点的总数。",
-        "validation": "MATCH (a:$L1)-[:$R *$MIN_HOPS..$MAX_HOPS]-(b:$L2) RETURN count(b) AS cnt"
+        "validation": "MATCH (a:$Label1)-[:$Rel *$MIN_HOPS..$MAX_HOPS]-(b:$Label2) RETURN count(b) AS cnt"
       },
       {
         "difficulty": 9,
         "title": "批量合并并验证带阈值的 Join 过滤（每行不同节点）",
         "template": [
-          "MERGE (n:$L2 {$PROP_ID: $VALUE1, $P2: $REF_VAL1})",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE2, $P2: $REF_VAL2})",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE3, $P2: $REF_VAL3})",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE4, $P2: $REF_VAL4})",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE5, $P2: $REF_VAL5})"
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE1, $Prop2: $REF_VAL1})",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE2, $Prop2: $REF_VAL2})",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE3, $Prop2: $REF_VAL3})",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE4, $Prop2: $REF_VAL4})",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE5, $Prop2: $REF_VAL5})"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -1370,61 +1370,61 @@
           "THRESHOLD": "integer"
         },
         "example": "批量合并多个新节点（每行不同 PROP_ID 与 P2 值），验证是否有主节点因匹配数超过阈值而进入结果集。",
-        "validation": "MATCH (a:$L1), (b:$L2) WHERE a.$P1 = b.$P2 WITH a, count(b) AS cnt WHERE cnt > $THRESHOLD RETURN count(a) AS cnt"
+        "validation": "MATCH (a:$Label1), (b:$Label2) WHERE a.$Prop1 = b.$Prop2 WITH a, count(b) AS cnt WHERE cnt > $THRESHOLD RETURN count(a) AS cnt"
       },
       {
         "difficulty": 10,
         "title": "批量合并并验证复杂路径模式计数（每行不同节点与值）",
         "template": [
-          "MERGE (r:$RL {$PROP_ID: $VALUE1}) SET r.$NP = $NV1",
-          "MERGE (r:$RL {$PROP_ID: $VALUE2}) SET r.$NP = $NV2",
-          "MERGE (r:$RL {$PROP_ID: $VALUE3}) SET r.$NP = $NV3",
-          "MERGE (r:$RL {$PROP_ID: $VALUE4}) SET r.$NP = $NV4",
-          "MERGE (r:$RL {$PROP_ID: $VALUE5}) SET r.$NP = $NV5"
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE1}) SET r.$NumProp = $NumVal1",
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE2}) SET r.$NumProp = $NumVal2",
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE3}) SET r.$NumProp = $NumVal3",
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE4}) SET r.$NumProp = $NumVal4",
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE5}) SET r.$NumProp = $NumVal5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "SL": "string",
-          "EL": "string",
-          "RL": "string",
-          "R1": "string",
-          "R2": "string",
-          "NP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "StartLabel": "string",
+          "EndLabel": "string",
+          "RefLabel": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "NumProp": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
           "VALUE4": "string",
           "VALUE5": "string",
-          "NV1": "string",
-          "NV2": "string",
-          "NV3": "string",
-          "NV4": "string",
-          "NV5": "string",
-          "SP": "string",
-          "SV": "string",
+          "NumVal1": "string",
+          "NumVal2": "string",
+          "NumVal3": "string",
+          "NumVal4": "string",
+          "NumVal5": "string",
+          "StartProp": "string",
+          "StartVal": "string",
           "MIN_HOPS": "integer",
           "MAX_HOPS": "integer"
         },
         "example": "批量合并更新路径中间多个节点（每行不同节点与值），验证符合特定重复模式的路径总数。",
-        "validation": "MATCH (s:$SL {$SP: $SV}) MATCH p = (s) ((n1:$L1)<-[:$R1]-(r:$RL)-[:$R2]->(n2:$L2) WHERE r.$NP = $NV1){$MIN_HOPS..$MAX_HOPS} (e:$EL) RETURN count(p) AS path_cnt"
+        "validation": "MATCH (s:$StartLabel {$StartProp: $StartVal}) MATCH p = (s) ((n1:$Label1)<-[:$Rel1]-(r:$RefLabel)-[:$Rel2]->(n2:$Label2) WHERE r.$NumProp = $NumVal1){$MIN_HOPS..$MAX_HOPS} (e:$EndLabel) RETURN count(p) AS path_cnt"
       },
       {
         "difficulty": 11,
         "title": "批量合并节点并验证无关标签的最大值（每行不同节点与值）",
         "template": [
-          "MERGE (n:$L1 {$PROP_ID: $VALUE1}) SET n.$P1 = $VAL1",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE2}) SET n.$P1 = $VAL2",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE3}) SET n.$P1 = $VAL3",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE4}) SET n.$P1 = $VAL4",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE5}) SET n.$P1 = $VAL5"
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE1}) SET n.$Prop1 = $VAL1",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE2}) SET n.$Prop1 = $VAL2",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE3}) SET n.$Prop1 = $VAL3",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE4}) SET n.$Prop1 = $VAL4",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE5}) SET n.$Prop1 = $VAL5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -1438,27 +1438,27 @@
           "VAL5": "integer"
         },
         "example": "批量合并更新多个节点（每行不同节点与值）后，验证其他无关标签的属性最大值是否保持稳定。",
-        "validation": "MATCH (a:$L2) RETURN max(a.$P2) AS max_val"
+        "validation": "MATCH (a:$Label2) RETURN max(a.$Prop2) AS max_val"
       },
       {
         "difficulty": 12,
         "title": "批量合并关系并验证无关路径的平均长度（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$R1]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$Rel1]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "L4": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Label4": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -1473,23 +1473,23 @@
           "MAX_HOPS": "integer"
         },
         "example": "批量合并多对关系（每行不同节点对）后，验证其他无关路径类型的平均长度是否保持不变。",
-        "validation": "MATCH p = (a:$L3)-[:$R2 *$MIN_HOPS..$MAX_HOPS]-(b:$L4) RETURN avg(length(p)) AS avg_len"
+        "validation": "MATCH p = (a:$Label3)-[:$Rel2 *$MIN_HOPS..$MAX_HOPS]-(b:$Label4) RETURN avg(length(p)) AS avg_len"
       },
       {
         "difficulty": 13,
         "title": "批量合并节点并验证无关标签的 Join 匹配数（每行不同节点与值）",
         "template": [
-          "MERGE (n:$L1 {$PROP_ID: $VALUE1}) SET n.$P1 = $VAL1",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE2}) SET n.$P1 = $VAL2",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE3}) SET n.$P1 = $VAL3",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE4}) SET n.$P1 = $VAL4",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE5}) SET n.$P1 = $VAL5"
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE1}) SET n.$Prop1 = $VAL1",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE2}) SET n.$Prop1 = $VAL2",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE3}) SET n.$Prop1 = $VAL3",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE4}) SET n.$Prop1 = $VAL4",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE5}) SET n.$Prop1 = $VAL5"
         ],
         "parameters": {
-          "L1": "string",
-          "L3": "string",
-          "L4": "string",
-          "P1": "string",
+          "Label1": "string",
+          "Label3": "string",
+          "Label4": "string",
+          "Prop1": "string",
           "P3": "string",
           "P4": "string",
           "PROP_ID": "string",
@@ -1505,7 +1505,7 @@
           "VAL5": "integer"
         },
         "example": "批量合并更新多个节点（每行不同节点与值）后，验证其他无关标签间的 Join 匹配数是否保持稳定。",
-        "validation": "MATCH (a:$L3), (b:$L4) WHERE a.$P3 = b.$P4 RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label3), (b:$Label4) WHERE a.$P3 = b.$P4 RETURN count(*) AS cnt"
       },
       {
         "difficulty": 14,
@@ -1630,24 +1630,24 @@
         "difficulty": 7,
         "title": "合并并验证连接过滤后的 Top 收集",
         "template": [
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL"
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
-          "BP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
+          "BaseProp": "string",
           "PROP_ID": "string",
           "VALUE": "string",
           "NEW_VAL": "integer"
         },
         "example": "合并更新 Join 目标节点的属性，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L2 {$PROP_ID: $VALUE}) RETURN n.$BP AS val"
+        "validation": "MATCH (n:$Label2 {$PROP_ID: $VALUE}) RETURN n.$BaseProp AS val"
       },
       {
         "difficulty": 1,
@@ -1671,20 +1671,20 @@
         "difficulty": 3,
         "title": "批量创建关系并验证路径链存在性（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) CREATE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) CREATE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) CREATE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) CREATE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) CREATE (a)-[:$R1]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) CREATE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) CREATE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) CREATE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) CREATE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) CREATE (a)-[:$Rel1]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -1697,7 +1697,7 @@
           "ID2_5": "string"
         },
         "example": "批量创建多段关系（每行不同节点对），验证是否补全多条三层深度链，避免重复边。",
-        "validation": "MATCH (a:$L1)-[:$R1]->(b:$L2)-[:$R2]->(c:$L3) RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label1)-[:$Rel1]->(b:$Label2)-[:$Rel2]->(c:$Label3) RETURN count(*) AS cnt"
       },
       {
         "difficulty": 4,
@@ -1730,39 +1730,39 @@
         "difficulty": 5,
         "title": "创建节点并验证嵌套循环引用",
         "template": [
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})"
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VAL": "string"
         },
         "example": "创建节点后，通过非关系型的属性关联（Join）检查匹配对数量。",
-        "validation": "MATCH (a:$L1) MATCH (b:$L2) WHERE a.$P1 = b.$P2 RETURN count(b) AS cnt"
+        "validation": "MATCH (a:$Label1) MATCH (b:$Label2) WHERE a.$Prop1 = b.$Prop2 RETURN count(b) AS cnt"
       },
       {
         "difficulty": 6,
         "title": "批量创建关系并验证多级路径平均长度（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) CREATE (a)-[:$R]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) CREATE (a)-[:$Rel]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
+          "Rel": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -1777,30 +1777,30 @@
           "MAX_HOPS": "integer"
         },
         "example": "批量创建多段连接（每行不同节点对），验证图中特定标签间变长路径的平均深度变化，避免重复边。",
-        "validation": "MATCH p = (a:$L1)-[:$R *$MIN_HOPS..$MAX_HOPS]-(b:$L2) RETURN avg(length(p)) AS avg_len"
+        "validation": "MATCH p = (a:$Label1)-[:$Rel *$MIN_HOPS..$MAX_HOPS]-(b:$Label2) RETURN avg(length(p)) AS avg_len"
       },
       {
         "difficulty": 7,
         "title": "批量创建节点并验证 Top-N 收集结果（每行不同节点）",
         "template": [
-          "CREATE (n:$L {$P: $V1})-[:$R]->(g:$GL {$PROP_ID: $GID1})",
-          "CREATE (n:$L {$P: $V2})-[:$R]->(g:$GL {$PROP_ID: $GID2})",
-          "CREATE (n:$L {$P: $V3})-[:$R]->(g:$GL {$PROP_ID: $GID3})",
-          "CREATE (n:$L {$P: $V4})-[:$R]->(g:$GL {$PROP_ID: $GID4})",
-          "CREATE (n:$L {$P: $V5})-[:$R]->(g:$GL {$PROP_ID: $GID5})"
+          "CREATE (n:$Label {$Prop: $V1})-[:$Rel]->(g:$GroupLabel {$PROP_ID: $GID1})",
+          "CREATE (n:$Label {$Prop: $V2})-[:$Rel]->(g:$GroupLabel {$PROP_ID: $GID2})",
+          "CREATE (n:$Label {$Prop: $V3})-[:$Rel]->(g:$GroupLabel {$PROP_ID: $GID3})",
+          "CREATE (n:$Label {$Prop: $V4})-[:$Rel]->(g:$GroupLabel {$PROP_ID: $GID4})",
+          "CREATE (n:$Label {$Prop: $V5})-[:$Rel]->(g:$GroupLabel {$PROP_ID: $GID5})"
         ],
         "parameters": {
-          "R": "string",
-          "GL": "string",
-          "P": "string",
-          "GP": "string",
+          "Rel": "string",
+          "GroupLabel": "string",
+          "Prop": "string",
+          "GroupProp": "string",
           "PROP_ID": "string",
           "GID1": "string",
           "GID2": "string",
           "GID3": "string",
           "GID4": "string",
           "GID5": "string",
-          "L": "string",
+          "Label": "string",
           "V1": "integer",
           "V2": "integer",
           "V3": "integer",
@@ -1808,47 +1808,47 @@
           "V5": "integer"
         },
         "example": "批量创建不同节点并关联分组（每行不同目标节点），验证是否进入该分组的 Top-5 列表，避免重复边。",
-        "validation": "MATCH (g:$GL {$PROP_ID: $GID1})<-[:$R]-(n:$L) RETURN count(n) AS exists"
+        "validation": "MATCH (g:$GroupLabel {$PROP_ID: $GID1})<-[:$Rel]-(n:$Label) RETURN count(n) AS exists"
       },
       {
         "difficulty": 8,
         "title": "创建节点并验证跨标签 Join 统计",
         "template": [
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})"
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VAL": "string"
         },
         "example": "创建节点后，检查跨标签的属性对等连接总数。",
-        "validation": "MATCH (a:$L1), (b:$L2) WHERE a.$P1 = b.$P2 AND a <> b RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label1), (b:$Label2) WHERE a.$Prop1 = b.$Prop2 AND a <> b RETURN count(*) AS cnt"
       },
       {
         "difficulty": 9,
         "title": "批量创建关系并验证复杂排他性逻辑（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $AID1}), (b:$L2 {$PROP_ID2: $BID1}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $AID2}), (b:$L2 {$PROP_ID2: $BID2}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $AID3}), (b:$L2 {$PROP_ID2: $BID3}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $AID4}), (b:$L2 {$PROP_ID2: $BID4}) CREATE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $AID5}), (b:$L2 {$PROP_ID2: $BID5}) CREATE (a)-[:$R]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $AID1}), (b:$Label2 {$PROP_ID2: $BID1}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID2}), (b:$Label2 {$PROP_ID2: $BID2}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID3}), (b:$Label2 {$PROP_ID2: $BID3}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID4}), (b:$Label2 {$PROP_ID2: $BID4}) CREATE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID5}), (b:$Label2 {$PROP_ID2: $BID5}) CREATE (a)-[:$Rel]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
-          "V": "string",
+          "Rel": "string",
+          "Val": "string",
           "AID1": "string",
           "AID2": "string",
           "AID3": "string",
@@ -1861,73 +1861,73 @@
           "BID5": "string"
         },
         "example": "批量创建多段关系（每行不同节点对），验证未建立连接的候选节点数量是否减少，避免重复边。",
-        "validation": "MATCH (a:$L1 {$P1: $V}), (b:$L2) WHERE NOT (a)-[:$R]->(b) RETURN count(b) AS cnt"
+        "validation": "MATCH (a:$Label1 {$Prop1: $Val}), (b:$Label2) WHERE NOT (a)-[:$Rel]->(b) RETURN count(b) AS cnt"
       },
       {
         "difficulty": 10,
         "title": "创建节点并验证四层链条聚合",
         "template": [
-          "CREATE (n:$L4 {$NP: $VAL})<-[:$R3]-(c:$L3 {$PROP_ID: $CID})",
-          "CREATE (n:$L4 {$NP: $VAL})<-[:$R3]-(c:$L3 {$PROP_ID: $CID})",
-          "CREATE (n:$L4 {$NP: $VAL})<-[:$R3]-(c:$L3 {$PROP_ID: $CID})",
-          "CREATE (n:$L4 {$NP: $VAL})<-[:$R3]-(c:$L3 {$PROP_ID: $CID})",
-          "CREATE (n:$L4 {$NP: $VAL})<-[:$R3]-(c:$L3 {$PROP_ID: $CID})"
+          "CREATE (n:$Label4 {$NumProp: $VAL})<-[:$Rel3]-(c:$Label3 {$PROP_ID: $CID})",
+          "CREATE (n:$Label4 {$NumProp: $VAL})<-[:$Rel3]-(c:$Label3 {$PROP_ID: $CID})",
+          "CREATE (n:$Label4 {$NumProp: $VAL})<-[:$Rel3]-(c:$Label3 {$PROP_ID: $CID})",
+          "CREATE (n:$Label4 {$NumProp: $VAL})<-[:$Rel3]-(c:$Label3 {$PROP_ID: $CID})",
+          "CREATE (n:$Label4 {$NumProp: $VAL})<-[:$Rel3]-(c:$Label3 {$PROP_ID: $CID})"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "L4": "string",
-          "R1": "string",
-          "R2": "string",
-          "R3": "string",
-          "NP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Label4": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "Rel3": "string",
+          "NumProp": "string",
           "PROP_ID": "string",
           "VAL": "integer",
           "CID": "string"
         },
         "example": "在长链末端创建节点，验证整条业务链末端数值的平均影响。",
-        "validation": "MATCH (a:$L1)-[:$R1]->(b:$L2)-[:$R2]->(c:$L3)-[:$R3]->(d:$L4) RETURN avg(d.$NP) AS final_avg"
+        "validation": "MATCH (a:$Label1)-[:$Rel1]->(b:$Label2)-[:$Rel2]->(c:$Label3)-[:$Rel3]->(d:$Label4) RETURN avg(d.$NumProp) AS final_avg"
       },
       {
         "difficulty": 11,
         "title": "创建节点并验证无关标签的全局聚合",
         "template": [
-          "CREATE (n:$L1 {$PROP: $VALUE})",
-          "CREATE (n:$L1 {$PROP: $VALUE})",
-          "CREATE (n:$L1 {$PROP: $VALUE})",
-          "CREATE (n:$L1 {$PROP: $VALUE})",
-          "CREATE (n:$L1 {$PROP: $VALUE})"
+          "CREATE (n:$Label1 {$PROP: $VALUE})",
+          "CREATE (n:$Label1 {$PROP: $VALUE})",
+          "CREATE (n:$Label1 {$PROP: $VALUE})",
+          "CREATE (n:$Label1 {$PROP: $VALUE})",
+          "CREATE (n:$Label1 {$PROP: $VALUE})"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP": "string",
-          "P2": "string",
+          "Prop2": "string",
           "VALUE": "string"
         },
         "example": "创建节点后，验证其他无关标签的数值总和是否保持稳定。",
-        "validation": "MATCH (a:$L2) RETURN sum(a.$P2) AS total"
+        "validation": "MATCH (a:$Label2) RETURN sum(a.$Prop2) AS total"
       },
       {
         "difficulty": 12,
         "title": "批量创建关系并验证无关路径的计数（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) CREATE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) CREATE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) CREATE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) CREATE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) CREATE (a)-[:$R1]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) CREATE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) CREATE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) CREATE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) CREATE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) CREATE (a)-[:$Rel1]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "L4": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Label4": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -1940,27 +1940,27 @@
           "ID2_5": "string"
         },
         "example": "批量创建多段关系（每行不同节点对）后，验证其他无关路径类型的数量是否保持不变，避免重复边。",
-        "validation": "MATCH (a:$L3)-[:$R2]->(b:$L4) RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label3)-[:$Rel2]->(b:$Label4) RETURN count(*) AS cnt"
       },
       {
         "difficulty": 13,
         "title": "创建节点并验证无关标签的属性平均值",
         "template": [
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})",
-          "CREATE (n:$L1 {$P1: $VAL})"
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})",
+          "CREATE (n:$Label1 {$Prop1: $VAL})"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "VAL": "string"
         },
         "example": "创建节点后，验证其他无关标签的属性平均值是否保持稳定。",
-        "validation": "MATCH (a:$L2) RETURN avg(a.$P2) AS avg_val"
+        "validation": "MATCH (a:$Label2) RETURN avg(a.$Prop2) AS avg_val"
       },
       {
         "difficulty": 14,
@@ -2043,20 +2043,20 @@
         "difficulty": 2,
         "title": "批量合并关系并验证扩展计数（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$R]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$Rel]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
-          "V": "string",
+          "Rel": "string",
+          "Val": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -2069,25 +2069,25 @@
           "ID2_5": "string"
         },
         "example": "批量合并多对节点的关系（每行不同节点对），验证起始节点的出度。",
-        "validation": "MATCH (n:$L1 {$P: $V})-[:$R]->(m) RETURN count(m) AS cnt"
+        "validation": "MATCH (n:$Label1 {$Prop: $Val})-[:$Rel]->(m) RETURN count(m) AS cnt"
       },
       {
         "difficulty": 3,
         "title": "批量合并关系并验证双重路径聚合（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$R2]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$R2]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$R2]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$R2]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$R2]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$Rel2]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$Rel2]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$Rel2]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$Rel2]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$Rel2]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -2100,25 +2100,25 @@
           "ID2_5": "string"
         },
         "example": "批量合并多对节点的新类型关系（每行不同节点对），验证同时拥有两种关系的对数。",
-        "validation": "MATCH (a:$L1)-[:$R1]->(b:$L2) MATCH (a)-[:$R2]->(b) RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label1)-[:$Rel1]->(b:$Label2) MATCH (a)-[:$Rel2]->(b) RETURN count(*) AS cnt"
       },
       {
         "difficulty": 4,
         "title": "批量合并并验证嵌套属性引用（每行不同节点与值）",
         "template": [
-          "MERGE (n:$L1 {$PROP_ID: $VALUE1}) SET n.$P1 = $NEW_REF1",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE2}) SET n.$P1 = $NEW_REF2",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE3}) SET n.$P1 = $NEW_REF3",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE4}) SET n.$P1 = $NEW_REF4",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE5}) SET n.$P1 = $NEW_REF5"
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE1}) SET n.$Prop1 = $NEW_REF1",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE2}) SET n.$Prop1 = $NEW_REF2",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE3}) SET n.$Prop1 = $NEW_REF3",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE4}) SET n.$Prop1 = $NEW_REF4",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE5}) SET n.$Prop1 = $NEW_REF5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
-          "V": "string",
+          "Val": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -2131,25 +2131,25 @@
           "NEW_REF5": "string"
         },
         "example": "批量合并更新多个节点的引用属性（每行不同节点与值），直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L1 {$PROP_ID: $VALUE1}) RETURN n.$P1 AS val"
+        "validation": "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) RETURN n.$Prop1 AS val"
       },
       {
         "difficulty": 5,
         "title": "批量合并关系并验证 OR 条件下节点计数（每行不同节点对）",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}), (m:$L2 {$PROP_ID: $MID1}) MERGE (n)-[:$R2]->(m)",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}), (m:$L2 {$PROP_ID: $MID2}) MERGE (n)-[:$R2]->(m)",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}), (m:$L2 {$PROP_ID: $MID3}) MERGE (n)-[:$R2]->(m)",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}), (m:$L2 {$PROP_ID: $MID4}) MERGE (n)-[:$R2]->(m)",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}), (m:$L2 {$PROP_ID: $MID5}) MERGE (n)-[:$R2]->(m)"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}), (m:$Label2 {$PROP_ID: $MID1}) MERGE (n)-[:$Rel2]->(m)",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}), (m:$Label2 {$PROP_ID: $MID2}) MERGE (n)-[:$Rel2]->(m)",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}), (m:$Label2 {$PROP_ID: $MID3}) MERGE (n)-[:$Rel2]->(m)",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}), (m:$Label2 {$PROP_ID: $MID4}) MERGE (n)-[:$Rel2]->(m)",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}), (m:$Label2 {$PROP_ID: $MID5}) MERGE (n)-[:$Rel2]->(m)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label": "string",
           "PROP_ID": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -2162,71 +2162,71 @@
           "MID5": "string"
         },
         "example": "批量合并多对关系（每行不同节点对），验证满足多重可选路径之一的节点总数。",
-        "validation": "MATCH (n:$L) WHERE (n)-[:$R1]->(:$L1) OR (n)-[:$R2]->(:$L2) RETURN count(n) AS cnt"
+        "validation": "MATCH (n:$Label) WHERE (n)-[:$Rel1]->(:$Label1) OR (n)-[:$Rel2]->(:$Label2) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 6,
         "title": "合并并验证三层链条的平均值",
         "template": [
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL",
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL",
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL",
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL",
-          "MERGE (n:$L3 {$PROP_ID: $VALUE}) SET n.$P = $VAL"
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL",
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL",
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL",
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL",
+          "MERGE (n:$Label3 {$PROP_ID: $VALUE}) SET n.$Prop = $VAL"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "R1": "string",
-          "R2": "string",
-          "P": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "Prop": "string",
           "PROP_ID": "string",
           "VAL": "integer",
           "VALUE": "string"
         },
         "example": "合并更新长链末端的属性，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L3 {$PROP_ID: $VALUE}) RETURN n.$P AS val"
+        "validation": "MATCH (n:$Label3 {$PROP_ID: $VALUE}) RETURN n.$Prop AS val"
       },
       {
         "difficulty": 7,
         "title": "合并并验证连接过滤后的 Top 收集",
         "template": [
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE}) SET n.$BP = $NEW_VAL"
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE}) SET n.$BaseProp = $NEW_VAL"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
-          "BP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
+          "BaseProp": "string",
           "PROP_ID": "string",
           "VALUE": "string",
           "NEW_VAL": "integer"
         },
         "example": "合并更新 Join 目标节点的属性，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L2 {$PROP_ID: $VALUE}) RETURN n.$BP AS val"
+        "validation": "MATCH (n:$Label2 {$PROP_ID: $VALUE}) RETURN n.$BaseProp AS val"
       },
       {
         "difficulty": 8,
         "title": "批量合并关系并验证变长路径计数（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$R]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$R]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$Rel]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$Rel]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
+          "Rel": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -2241,23 +2241,23 @@
           "MAX_HOPS": "integer"
         },
         "example": "批量合并多对关系（每行不同节点对），验证在指定跳数范围内可达节点的总数。",
-        "validation": "MATCH (a:$L1)-[:$R *$MIN_HOPS..$MAX_HOPS]-(b:$L2) RETURN count(b) AS cnt"
+        "validation": "MATCH (a:$Label1)-[:$Rel *$MIN_HOPS..$MAX_HOPS]-(b:$Label2) RETURN count(b) AS cnt"
       },
       {
         "difficulty": 9,
         "title": "批量合并并验证带阈值的 Join 过滤（每行不同节点）",
         "template": [
-          "MERGE (n:$L2 {$PROP_ID: $VALUE1, $P2: $REF_VAL1})",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE2, $P2: $REF_VAL2})",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE3, $P2: $REF_VAL3})",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE4, $P2: $REF_VAL4})",
-          "MERGE (n:$L2 {$PROP_ID: $VALUE5, $P2: $REF_VAL5})"
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE1, $Prop2: $REF_VAL1})",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE2, $Prop2: $REF_VAL2})",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE3, $Prop2: $REF_VAL3})",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE4, $Prop2: $REF_VAL4})",
+          "MERGE (n:$Label2 {$PROP_ID: $VALUE5, $Prop2: $REF_VAL5})"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -2272,61 +2272,61 @@
           "THRESHOLD": "integer"
         },
         "example": "批量合并多个新节点（每行不同 PROP_ID 与 P2 值），验证是否有主节点因匹配数超过阈值而进入结果集。",
-        "validation": "MATCH (a:$L1), (b:$L2) WHERE a.$P1 = b.$P2 WITH a, count(b) AS cnt WHERE cnt > $THRESHOLD RETURN count(a) AS cnt"
+        "validation": "MATCH (a:$Label1), (b:$Label2) WHERE a.$Prop1 = b.$Prop2 WITH a, count(b) AS cnt WHERE cnt > $THRESHOLD RETURN count(a) AS cnt"
       },
       {
         "difficulty": 10,
         "title": "批量合并并验证复杂路径模式计数（每行不同节点与值）",
         "template": [
-          "MERGE (r:$RL {$PROP_ID: $VALUE1}) SET r.$NP = $NV1",
-          "MERGE (r:$RL {$PROP_ID: $VALUE2}) SET r.$NP = $NV2",
-          "MERGE (r:$RL {$PROP_ID: $VALUE3}) SET r.$NP = $NV3",
-          "MERGE (r:$RL {$PROP_ID: $VALUE4}) SET r.$NP = $NV4",
-          "MERGE (r:$RL {$PROP_ID: $VALUE5}) SET r.$NP = $NV5"
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE1}) SET r.$NumProp = $NumVal1",
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE2}) SET r.$NumProp = $NumVal2",
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE3}) SET r.$NumProp = $NumVal3",
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE4}) SET r.$NumProp = $NumVal4",
+          "MERGE (r:$RefLabel {$PROP_ID: $VALUE5}) SET r.$NumProp = $NumVal5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "SL": "string",
-          "EL": "string",
-          "RL": "string",
-          "R1": "string",
-          "R2": "string",
-          "NP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "StartLabel": "string",
+          "EndLabel": "string",
+          "RefLabel": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "NumProp": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
           "VALUE4": "string",
           "VALUE5": "string",
-          "NV1": "string",
-          "NV2": "string",
-          "NV3": "string",
-          "NV4": "string",
-          "NV5": "string",
-          "SP": "string",
-          "SV": "string",
+          "NumVal1": "string",
+          "NumVal2": "string",
+          "NumVal3": "string",
+          "NumVal4": "string",
+          "NumVal5": "string",
+          "StartProp": "string",
+          "StartVal": "string",
           "MIN_HOPS": "integer",
           "MAX_HOPS": "integer"
         },
         "example": "批量合并更新路径中间多个节点（每行不同节点与值），验证符合特定重复模式的路径总数。",
-        "validation": "MATCH (s:$SL {$SP: $SV}) MATCH p = (s) ((n1:$L1)<-[:$R1]-(r:$RL)-[:$R2]->(n2:$L2) WHERE r.$NP = $NV1){$MIN_HOPS..$MAX_HOPS} (e:$EL) RETURN count(p) AS path_cnt"
+        "validation": "MATCH (s:$StartLabel {$StartProp: $StartVal}) MATCH p = (s) ((n1:$Label1)<-[:$Rel1]-(r:$RefLabel)-[:$Rel2]->(n2:$Label2) WHERE r.$NumProp = $NumVal1){$MIN_HOPS..$MAX_HOPS} (e:$EndLabel) RETURN count(p) AS path_cnt"
       },
       {
         "difficulty": 11,
         "title": "批量合并节点并验证无关标签的最大值（每行不同节点与值）",
         "template": [
-          "MERGE (n:$L1 {$PROP_ID: $VALUE1}) SET n.$P1 = $VAL1",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE2}) SET n.$P1 = $VAL2",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE3}) SET n.$P1 = $VAL3",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE4}) SET n.$P1 = $VAL4",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE5}) SET n.$P1 = $VAL5"
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE1}) SET n.$Prop1 = $VAL1",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE2}) SET n.$Prop1 = $VAL2",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE3}) SET n.$Prop1 = $VAL3",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE4}) SET n.$Prop1 = $VAL4",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE5}) SET n.$Prop1 = $VAL5"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -2340,27 +2340,27 @@
           "VAL5": "integer"
         },
         "example": "批量合并更新多个节点（每行不同节点与值）后，验证其他无关标签的属性最大值是否保持稳定。",
-        "validation": "MATCH (a:$L2) RETURN max(a.$P2) AS max_val"
+        "validation": "MATCH (a:$Label2) RETURN max(a.$Prop2) AS max_val"
       },
       {
         "difficulty": 12,
         "title": "批量合并关系并验证无关路径的平均长度（每行不同节点对）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_1}), (b:$L2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_2}), (b:$L2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_3}), (b:$L2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_4}), (b:$L2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$R1]->(b)",
-          "MATCH (a:$L1 {$PROP_ID1: $ID1_5}), (b:$L2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$R1]->(b)"
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_1}), (b:$Label2 {$PROP_ID2: $ID2_1}) MERGE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_2}), (b:$Label2 {$PROP_ID2: $ID2_2}) MERGE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_3}), (b:$Label2 {$PROP_ID2: $ID2_3}) MERGE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_4}), (b:$Label2 {$PROP_ID2: $ID2_4}) MERGE (a)-[:$Rel1]->(b)",
+          "MATCH (a:$Label1 {$PROP_ID1: $ID1_5}), (b:$Label2 {$PROP_ID2: $ID2_5}) MERGE (a)-[:$Rel1]->(b)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "L4": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Label4": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "ID1_1": "string",
           "ID1_2": "string",
           "ID1_3": "string",
@@ -2375,23 +2375,23 @@
           "MAX_HOPS": "integer"
         },
         "example": "批量合并多对关系（每行不同节点对）后，验证其他无关路径类型的平均长度是否保持不变。",
-        "validation": "MATCH p = (a:$L3)-[:$R2 *$MIN_HOPS..$MAX_HOPS]-(b:$L4) RETURN avg(length(p)) AS avg_len"
+        "validation": "MATCH p = (a:$Label3)-[:$Rel2 *$MIN_HOPS..$MAX_HOPS]-(b:$Label4) RETURN avg(length(p)) AS avg_len"
       },
       {
         "difficulty": 13,
         "title": "批量合并节点并验证无关标签的 Join 匹配数（每行不同节点与值）",
         "template": [
-          "MERGE (n:$L1 {$PROP_ID: $VALUE1}) SET n.$P1 = $VAL1",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE2}) SET n.$P1 = $VAL2",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE3}) SET n.$P1 = $VAL3",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE4}) SET n.$P1 = $VAL4",
-          "MERGE (n:$L1 {$PROP_ID: $VALUE5}) SET n.$P1 = $VAL5"
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE1}) SET n.$Prop1 = $VAL1",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE2}) SET n.$Prop1 = $VAL2",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE3}) SET n.$Prop1 = $VAL3",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE4}) SET n.$Prop1 = $VAL4",
+          "MERGE (n:$Label1 {$PROP_ID: $VALUE5}) SET n.$Prop1 = $VAL5"
         ],
         "parameters": {
-          "L1": "string",
-          "L3": "string",
-          "L4": "string",
-          "P1": "string",
+          "Label1": "string",
+          "Label3": "string",
+          "Label4": "string",
+          "Prop1": "string",
           "P3": "string",
           "P4": "string",
           "PROP_ID": "string",
@@ -2407,7 +2407,7 @@
           "VAL5": "integer"
         },
         "example": "批量合并更新多个节点（每行不同节点与值）后，验证其他无关标签间的 Join 匹配数是否保持稳定。",
-        "validation": "MATCH (a:$L3), (b:$L4) WHERE a.$P3 = b.$P4 RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label3), (b:$Label4) WHERE a.$P3 = b.$P4 RETURN count(*) AS cnt"
       },
       {
         "difficulty": 14,
@@ -2492,20 +2492,20 @@
         "difficulty": 2,
         "title": "循环建立关系并验证出度聚合（每行不同源节点与目标列表）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $AID1}), (others:$L2) WHERE others.$PROP_ID2 IN $IDS1 FOREACH (o IN [others] | CREATE (a)-[:$R]->(o))",
-          "MATCH (a:$L1 {$PROP_ID1: $AID2}), (others:$L2) WHERE others.$PROP_ID2 IN $IDS2 FOREACH (o IN [others] | CREATE (a)-[:$R]->(o))",
-          "MATCH (a:$L1 {$PROP_ID1: $AID3}), (others:$L2) WHERE others.$PROP_ID2 IN $IDS3 FOREACH (o IN [others] | CREATE (a)-[:$R]->(o))",
-          "MATCH (a:$L1 {$PROP_ID1: $AID4}), (others:$L2) WHERE others.$PROP_ID2 IN $IDS4 FOREACH (o IN [others] | CREATE (a)-[:$R]->(o))",
-          "MATCH (a:$L1 {$PROP_ID1: $AID5}), (others:$L2) WHERE others.$PROP_ID2 IN $IDS5 FOREACH (o IN [others] | CREATE (a)-[:$R]->(o))"
+          "MATCH (a:$Label1 {$PROP_ID1: $AID1}), (others:$Label2) WHERE others.$PROP_ID2 IN $IDS1 FOREACH (o IN [others] | CREATE (a)-[:$Rel]->(o))",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID2}), (others:$Label2) WHERE others.$PROP_ID2 IN $IDS2 FOREACH (o IN [others] | CREATE (a)-[:$Rel]->(o))",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID3}), (others:$Label2) WHERE others.$PROP_ID2 IN $IDS3 FOREACH (o IN [others] | CREATE (a)-[:$Rel]->(o))",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID4}), (others:$Label2) WHERE others.$PROP_ID2 IN $IDS4 FOREACH (o IN [others] | CREATE (a)-[:$Rel]->(o))",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID5}), (others:$Label2) WHERE others.$PROP_ID2 IN $IDS5 FOREACH (o IN [others] | CREATE (a)-[:$Rel]->(o))"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
-          "V": "string",
+          "Rel": "string",
+          "Val": "string",
           "AID1": "string",
           "AID2": "string",
           "AID3": "string",
@@ -2518,23 +2518,23 @@
           "IDS5": "list"
         },
         "example": "为多个节点分别批量连接不同目标（每行不同源与目标列表），直接查询是否存在新建关系。",
-        "validation": "MATCH (a:$L1 {$PROP_ID1: $AID1})-[r:$R]->(b:$L2) RETURN b.$PROP_ID2 AS val"
+        "validation": "MATCH (a:$Label1 {$PROP_ID1: $AID1})-[r:$Rel]->(b:$Label2) RETURN b.$PROP_ID2 AS val"
       },
       {
         "difficulty": 3,
         "title": "循环更新并验证 Join 匹配总数（每行不同节点集与值）",
         "template": [
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL1)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL2)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL3)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL4)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL5)"
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL1)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL2)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL3)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL4)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL5)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "NEW_VAL1": "string",
           "NEW_VAL2": "string",
@@ -2548,25 +2548,25 @@
           "IDS5": "list"
         },
         "example": "批量修改多批节点的 Join 键（每行不同节点集与值），直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS1 RETURN n.$P1 AS val"
+        "validation": "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS1 RETURN n.$Prop1 AS val"
       },
       {
         "difficulty": 4,
         "title": "循环处理路径并验证链条平均值（每行不同节点集与值）",
         "template": [
-          "MATCH (n:$L3) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$P = $VAL1)",
-          "MATCH (n:$L3) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$P = $VAL2)",
-          "MATCH (n:$L3) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$P = $VAL3)",
-          "MATCH (n:$L3) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$P = $VAL4)",
-          "MATCH (n:$L3) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$P = $VAL5)"
+          "MATCH (n:$Label3) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$Prop = $VAL1)",
+          "MATCH (n:$Label3) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$Prop = $VAL2)",
+          "MATCH (n:$Label3) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$Prop = $VAL3)",
+          "MATCH (n:$Label3) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$Prop = $VAL4)",
+          "MATCH (n:$Label3) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$Prop = $VAL5)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "R1": "string",
-          "R2": "string",
-          "P": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "Prop": "string",
           "PROP_ID": "string",
           "VAL1": "integer",
           "VAL2": "integer",
@@ -2580,23 +2580,23 @@
           "IDS5": "list"
         },
         "example": "批量更新多批链条末端数值（每行不同节点集与值），直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L3) WHERE n.$PROP_ID IN $IDS1 RETURN n.$P AS val"
+        "validation": "MATCH (n:$Label3) WHERE n.$PROP_ID IN $IDS1 RETURN n.$Prop AS val"
       },
       {
         "difficulty": 5,
         "title": "循环设置属性并验证嵌套引用计数（每行不同节点集与值）",
         "template": [
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$P1 = $NEW_REF1)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$P1 = $NEW_REF2)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$P1 = $NEW_REF3)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$P1 = $NEW_REF4)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$P1 = $NEW_REF5)"
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_REF1)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_REF2)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_REF3)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_REF4)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_REF5)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "NEW_REF1": "string",
           "NEW_REF2": "string",
@@ -2610,26 +2610,26 @@
           "IDS5": "list"
         },
         "example": "批量重定向多批节点的引用属性（每行不同节点集与值），直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS1 RETURN n.$P1 AS val"
+        "validation": "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS1 RETURN n.$Prop1 AS val"
       },
       {
         "difficulty": 6,
         "title": "循环创建并验证 OR 逻辑下的聚合（每行不同节点集）",
         "template": [
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | CREATE (i)-[:$R1]->(:$L1))",
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | CREATE (i)-[:$R1]->(:$L1))",
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | CREATE (i)-[:$R1]->(:$L1))",
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | CREATE (i)-[:$R1]->(:$L1))",
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | CREATE (i)-[:$R1]->(:$L1))"
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | CREATE (i)-[:$Rel1]->(:$Label1))",
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | CREATE (i)-[:$Rel1]->(:$Label1))",
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | CREATE (i)-[:$Rel1]->(:$Label1))",
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | CREATE (i)-[:$Rel1]->(:$Label1))",
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | CREATE (i)-[:$Rel1]->(:$Label1))"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "NP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "NumProp": "string",
           "PROP_ID": "string",
-          "R1": "string",
-          "R2": "string",
-          "L": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "Label": "string",
           "IDS1": "list",
           "IDS2": "list",
           "IDS3": "list",
@@ -2637,30 +2637,30 @@
           "IDS5": "list"
         },
         "example": "批量为多批节点建立关系（每行不同节点集），直接查询是否存在新建关系。",
-        "validation": "MATCH (n:$L)-[r:$R1]->(m:$L1) RETURN type(r) AS val"
+        "validation": "MATCH (n:$Label)-[r:$Rel1]->(m:$Label1) RETURN type(r) AS val"
       },
       {
         "difficulty": 7,
         "title": "循环更新并验证 Top-N 收集列表（每行不同节点集）",
         "template": [
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$P = i.$P + $INC1)",
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$P = i.$P + $INC2)",
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$P = i.$P + $INC3)",
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$P = i.$P + $INC4)",
-          "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$P = i.$P + $INC5)"
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$Prop = i.$Prop + $INC1)",
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$Prop = i.$Prop + $INC2)",
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$Prop = i.$Prop + $INC3)",
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$Prop = i.$Prop + $INC4)",
+          "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$Prop = i.$Prop + $INC5)"
         ],
         "parameters": {
-          "R": "string",
-          "GL": "string",
-          "P": "string",
-          "GP": "string",
+          "Rel": "string",
+          "GroupLabel": "string",
+          "Prop": "string",
+          "GroupProp": "string",
           "PROP_ID": "string",
           "INC1": "integer",
           "INC2": "integer",
           "INC3": "integer",
           "INC4": "integer",
           "INC5": "integer",
-          "L": "string",
+          "Label": "string",
           "IDS1": "list",
           "IDS2": "list",
           "IDS3": "list",
@@ -2668,23 +2668,23 @@
           "IDS5": "list"
         },
         "example": "批量增加多批节点权重（每行不同节点集与增量），直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L) WHERE n.$PROP_ID IN $IDS1 RETURN n.$P AS val"
+        "validation": "MATCH (n:$Label) WHERE n.$PROP_ID IN $IDS1 RETURN n.$Prop AS val"
       },
       {
         "difficulty": 8,
         "title": "循环创建关系并验证变长路径长度（每行不同节点集对）",
         "template": [
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS1 AND b.$PROP_ID IN $B_IDS1 FOREACH (x IN [1] | CREATE (a)-[:$R]->(b))",
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS2 AND b.$PROP_ID IN $B_IDS2 FOREACH (x IN [1] | CREATE (a)-[:$R]->(b))",
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS3 AND b.$PROP_ID IN $B_IDS3 FOREACH (x IN [1] | CREATE (a)-[:$R]->(b))",
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS4 AND b.$PROP_ID IN $B_IDS4 FOREACH (x IN [1] | CREATE (a)-[:$R]->(b))",
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS5 AND b.$PROP_ID IN $B_IDS5 FOREACH (x IN [1] | CREATE (a)-[:$R]->(b))"
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS1 AND b.$PROP_ID IN $B_IDS1 FOREACH (x IN [1] | CREATE (a)-[:$Rel]->(b))",
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS2 AND b.$PROP_ID IN $B_IDS2 FOREACH (x IN [1] | CREATE (a)-[:$Rel]->(b))",
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS3 AND b.$PROP_ID IN $B_IDS3 FOREACH (x IN [1] | CREATE (a)-[:$Rel]->(b))",
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS4 AND b.$PROP_ID IN $B_IDS4 FOREACH (x IN [1] | CREATE (a)-[:$Rel]->(b))",
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS5 AND b.$PROP_ID IN $B_IDS5 FOREACH (x IN [1] | CREATE (a)-[:$Rel]->(b))"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID": "string",
-          "R": "string",
+          "Rel": "string",
           "MIN_HOPS": "integer",
           "MAX_HOPS": "integer",
           "A_IDS1": "list",
@@ -2699,23 +2699,23 @@
           "B_IDS5": "list"
         },
         "example": "批量建立多批连接（每行不同节点集对），直接查询是否存在新建关系。",
-        "validation": "MATCH (a:$L1)-[r:$R]->(b:$L2) RETURN type(r) AS val"
+        "validation": "MATCH (a:$Label1)-[r:$Rel]->(b:$Label2) RETURN type(r) AS val"
       },
       {
         "difficulty": 9,
         "title": "循环更新并验证 Join 阈值过滤结果（每行不同节点集与值）",
         "template": [
-          "MATCH (n:$L2) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$P2 = $NEW_REF1)",
-          "MATCH (n:$L2) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$P2 = $NEW_REF2)",
-          "MATCH (n:$L2) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$P2 = $NEW_REF3)",
-          "MATCH (n:$L2) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$P2 = $NEW_REF4)",
-          "MATCH (n:$L2) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$P2 = $NEW_REF5)"
+          "MATCH (n:$Label2) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$Prop2 = $NEW_REF1)",
+          "MATCH (n:$Label2) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$Prop2 = $NEW_REF2)",
+          "MATCH (n:$Label2) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$Prop2 = $NEW_REF3)",
+          "MATCH (n:$Label2) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$Prop2 = $NEW_REF4)",
+          "MATCH (n:$Label2) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$Prop2 = $NEW_REF5)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "NEW_REF1": "string",
           "NEW_REF2": "string",
@@ -2730,35 +2730,35 @@
           "IDS5": "list"
         },
         "example": "批量修改多批目标的关联键（每行不同节点集与值），直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L2) WHERE n.$PROP_ID IN $IDS1 RETURN n.$P2 AS val"
+        "validation": "MATCH (n:$Label2) WHERE n.$PROP_ID IN $IDS1 RETURN n.$Prop2 AS val"
       },
       {
         "difficulty": 10,
         "title": "循环构建复杂路径模式并验证计数（每行不同节点集与值）",
         "template": [
-          "MATCH (r:$RL) WHERE r.$PROP_ID IN $IDS1 FOREACH (i IN [r] | SET i.$NP = $NV1)",
-          "MATCH (r:$RL) WHERE r.$PROP_ID IN $IDS2 FOREACH (i IN [r] | SET i.$NP = $NV2)",
-          "MATCH (r:$RL) WHERE r.$PROP_ID IN $IDS3 FOREACH (i IN [r] | SET i.$NP = $NV3)",
-          "MATCH (r:$RL) WHERE r.$PROP_ID IN $IDS4 FOREACH (i IN [r] | SET i.$NP = $NV4)",
-          "MATCH (r:$RL) WHERE r.$PROP_ID IN $IDS5 FOREACH (i IN [r] | SET i.$NP = $NV5)"
+          "MATCH (r:$RefLabel) WHERE r.$PROP_ID IN $IDS1 FOREACH (i IN [r] | SET i.$NumProp = $NumVal1)",
+          "MATCH (r:$RefLabel) WHERE r.$PROP_ID IN $IDS2 FOREACH (i IN [r] | SET i.$NumProp = $NumVal2)",
+          "MATCH (r:$RefLabel) WHERE r.$PROP_ID IN $IDS3 FOREACH (i IN [r] | SET i.$NumProp = $NumVal3)",
+          "MATCH (r:$RefLabel) WHERE r.$PROP_ID IN $IDS4 FOREACH (i IN [r] | SET i.$NumProp = $NumVal4)",
+          "MATCH (r:$RefLabel) WHERE r.$PROP_ID IN $IDS5 FOREACH (i IN [r] | SET i.$NumProp = $NumVal5)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "SL": "string",
-          "EL": "string",
-          "RL": "string",
-          "R1": "string",
-          "R2": "string",
-          "NP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "StartLabel": "string",
+          "EndLabel": "string",
+          "RefLabel": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "NumProp": "string",
           "PROP_ID": "string",
-          "NV1": "string",
-          "NV2": "string",
-          "NV3": "string",
-          "NV4": "string",
-          "NV5": "string",
-          "SP": "string",
-          "SV": "string",
+          "NumVal1": "string",
+          "NumVal2": "string",
+          "NumVal3": "string",
+          "NumVal4": "string",
+          "NumVal5": "string",
+          "StartProp": "string",
+          "StartVal": "string",
           "MIN_HOPS": "integer",
           "MAX_HOPS": "integer",
           "IDS1": "list",
@@ -2768,23 +2768,23 @@
           "IDS5": "list"
         },
         "example": "批量修改多批路径中间节点的属性（每行不同节点集与值），直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (r:$RL) WHERE r.$PROP_ID IN $IDS1 RETURN r.$NP AS val"
+        "validation": "MATCH (r:$RefLabel) WHERE r.$PROP_ID IN $IDS1 RETURN r.$NumProp AS val"
       },
       {
         "difficulty": 11,
         "title": "循环操作并验证无关标签的聚合统计（每行不同节点集与值）",
         "template": [
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$P1 = $VAL1)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$P1 = $VAL2)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$P1 = $VAL3)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$P1 = $VAL4)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$P1 = $VAL5)"
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$Prop1 = $VAL1)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$Prop1 = $VAL2)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$Prop1 = $VAL3)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$Prop1 = $VAL4)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$Prop1 = $VAL5)"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VAL1": "integer",
           "VAL2": "integer",
@@ -2798,26 +2798,26 @@
           "IDS5": "list"
         },
         "example": "批量更新多批节点（每行不同节点集与值）后，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS1 RETURN n.$P1 AS val"
+        "validation": "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS1 RETURN n.$Prop1 AS val"
       },
       {
         "difficulty": 12,
         "title": "循环创建关系并验证无关路径的计数（每行不同节点集对）",
         "template": [
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS1 AND b.$PROP_ID IN $B_IDS1 FOREACH (x IN [1] | CREATE (a)-[:$R1]->(b))",
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS2 AND b.$PROP_ID IN $B_IDS2 FOREACH (x IN [1] | CREATE (a)-[:$R1]->(b))",
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS3 AND b.$PROP_ID IN $B_IDS3 FOREACH (x IN [1] | CREATE (a)-[:$R1]->(b))",
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS4 AND b.$PROP_ID IN $B_IDS4 FOREACH (x IN [1] | CREATE (a)-[:$R1]->(b))",
-          "MATCH (a:$L1), (b:$L2) WHERE a.$PROP_ID IN $A_IDS5 AND b.$PROP_ID IN $B_IDS5 FOREACH (x IN [1] | CREATE (a)-[:$R1]->(b))"
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS1 AND b.$PROP_ID IN $B_IDS1 FOREACH (x IN [1] | CREATE (a)-[:$Rel1]->(b))",
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS2 AND b.$PROP_ID IN $B_IDS2 FOREACH (x IN [1] | CREATE (a)-[:$Rel1]->(b))",
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS3 AND b.$PROP_ID IN $B_IDS3 FOREACH (x IN [1] | CREATE (a)-[:$Rel1]->(b))",
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS4 AND b.$PROP_ID IN $B_IDS4 FOREACH (x IN [1] | CREATE (a)-[:$Rel1]->(b))",
+          "MATCH (a:$Label1), (b:$Label2) WHERE a.$PROP_ID IN $A_IDS5 AND b.$PROP_ID IN $B_IDS5 FOREACH (x IN [1] | CREATE (a)-[:$Rel1]->(b))"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "L4": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Label4": "string",
           "PROP_ID": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "A_IDS1": "list",
           "A_IDS2": "list",
           "A_IDS3": "list",
@@ -2830,23 +2830,23 @@
           "B_IDS5": "list"
         },
         "example": "批量创建多批关系（每行不同节点集对）后，直接查询是否存在新建关系。",
-        "validation": "MATCH (a:$L1)-[r:$R1]->(b:$L2) RETURN type(r) AS val"
+        "validation": "MATCH (a:$Label1)-[r:$Rel1]->(b:$Label2) RETURN type(r) AS val"
       },
       {
         "difficulty": 13,
         "title": "循环更新并验证无关标签的 Join 匹配（每行不同节点集与值）",
         "template": [
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL1)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL2)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL3)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL4)",
-          "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$P1 = $NEW_VAL5)"
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS1 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL1)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS2 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL2)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS3 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL3)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS4 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL4)",
+          "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS5 FOREACH (i IN [n] | SET i.$Prop1 = $NEW_VAL5)"
         ],
         "parameters": {
-          "L1": "string",
-          "L3": "string",
-          "L4": "string",
-          "P1": "string",
+          "Label1": "string",
+          "Label3": "string",
+          "Label4": "string",
+          "Prop1": "string",
           "P3": "string",
           "P4": "string",
           "PROP_ID": "string",
@@ -2862,7 +2862,7 @@
           "IDS5": "list"
         },
         "example": "批量更新多批节点属性（每行不同节点集与值）后，直接查询修改后的属性验证是否读到修改后的值。",
-        "validation": "MATCH (n:$L1) WHERE n.$PROP_ID IN $IDS1 RETURN n.$P1 AS val"
+        "validation": "MATCH (n:$Label1) WHERE n.$PROP_ID IN $IDS1 RETURN n.$Prop1 AS val"
       }
     ]
   },
@@ -2896,18 +2896,18 @@
         "difficulty": 2,
         "title": "批量删除关系并验证入度聚合（每行删除不同目标上的边）",
         "template": [
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE1}) DELETE r",
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE2}) DELETE r",
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE3}) DELETE r",
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE4}) DELETE r",
-          "MATCH (a)-[r:$R]->(b:$L1 {$PROP_ID: $VALUE5}) DELETE r"
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE1}) DELETE r",
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE2}) DELETE r",
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE3}) DELETE r",
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE4}) DELETE r",
+          "MATCH (a)-[r:$Rel]->(b:$Label1 {$PROP_ID: $VALUE5}) DELETE r"
         ],
         "parameters": {
-          "L1": "string",
-          "P": "string",
+          "Label1": "string",
+          "Prop": "string",
           "PROP_ID": "string",
-          "R": "string",
-          "V": "string",
+          "Rel": "string",
+          "Val": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -2915,23 +2915,23 @@
           "VALUE5": "string"
         },
         "example": "批量删除指向不同节点的关系，直接查询剩余关系指向的节点属性验证删除后的图状态。",
-        "validation": "MATCH ()-[r:$R]->(b:$L1) RETURN b.$PROP_ID AS val"
+        "validation": "MATCH ()-[r:$Rel]->(b:$Label1) RETURN b.$PROP_ID AS val"
       },
       {
         "difficulty": 3,
         "title": "批量删除节点并验证 Join 匹配数（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L2 {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -2940,26 +2940,26 @@
           "VALUE5": "string"
         },
         "example": "删除一个参与 Join 的节点，直接查询剩余节点属性验证删除后的图状态。",
-        "validation": "MATCH (n:$L2) RETURN n.$PROP_ID AS val"
+        "validation": "MATCH (n:$Label2) RETURN n.$PROP_ID AS val"
       },
       {
         "difficulty": 4,
         "title": "批量删除关系并验证排他性查询（每行删除不同边）",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $AID1})-[r:$R]->(b:$L2 {$PROP_ID2: $BID1}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID2})-[r:$R]->(b:$L2 {$PROP_ID2: $BID2}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID3})-[r:$R]->(b:$L2 {$PROP_ID2: $BID3}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID4})-[r:$R]->(b:$L2 {$PROP_ID2: $BID4}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID5})-[r:$R]->(b:$L2 {$PROP_ID2: $BID5}) DELETE r"
+          "MATCH (a:$Label1 {$PROP_ID1: $AID1})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID1}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID2})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID2}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID3})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID3}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID4})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID4}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID5})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID5}) DELETE r"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
-          "V": "string",
+          "Rel": "string",
+          "Val": "string",
           "AID1": "string",
           "AID2": "string",
           "AID3": "string",
@@ -2972,24 +2972,24 @@
           "BID5": "string"
         },
         "example": "批量删除多段关系（每行不同节点对），验证进入“未连接”状态的节点数量。",
-        "validation": "MATCH (a:$L1)-[r:$R]->(b:$L2) RETURN count(r) AS cnt"
+        "validation": "MATCH (a:$Label1)-[r:$Rel]->(b:$Label2) RETURN count(r) AS cnt"
       },
       {
         "difficulty": 5,
         "title": "批量删除路径并验证链条完整性（每行删除不同节点）",
         "template": [
-          "MATCH (b:$L2 {$PROP_ID: $VALUE1}) DETACH DELETE b",
-          "MATCH (b:$L2 {$PROP_ID: $VALUE2}) DETACH DELETE b",
-          "MATCH (b:$L2 {$PROP_ID: $VALUE3}) DETACH DELETE b",
-          "MATCH (b:$L2 {$PROP_ID: $VALUE4}) DETACH DELETE b",
-          "MATCH (b:$L2 {$PROP_ID: $VALUE5}) DETACH DELETE b"
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE1}) DETACH DELETE b",
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE2}) DETACH DELETE b",
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE3}) DETACH DELETE b",
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE4}) DETACH DELETE b",
+          "MATCH (b:$Label2 {$PROP_ID: $VALUE5}) DETACH DELETE b"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "L3": "string",
-          "R1": "string",
-          "R2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Label3": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -2998,26 +2998,26 @@
           "VALUE5": "string"
         },
         "example": "删除链条中间的节点，直接查询剩余节点属性验证删除后的图状态。",
-        "validation": "MATCH (b:$L2) RETURN b.$PROP_ID AS val"
+        "validation": "MATCH (b:$Label2) RETURN b.$PROP_ID AS val"
       },
       {
         "difficulty": 6,
         "title": "批量删除节点并验证 OR 逻辑下的聚合（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "NP": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "NumProp": "string",
           "PROP_ID": "string",
-          "R1": "string",
-          "R2": "string",
-          "L": "string",
+          "Rel1": "string",
+          "Rel2": "string",
+          "Label": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -3025,7 +3025,7 @@
           "VALUE5": "string"
         },
         "example": "批量删除多个不同节点，直接查询剩余节点属性验证删除后的图状态。",
-        "validation": "MATCH (n:$L) RETURN n.$PROP_ID AS val"
+        "validation": "MATCH (n:$Label) RETURN n.$PROP_ID AS val"
       },
       {
         "difficulty": 7,
@@ -3038,10 +3038,10 @@
           "MATCH (n {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID": "string",
-          "R": "string",
+          "Rel": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -3057,43 +3057,43 @@
         "difficulty": 8,
         "title": "批量删除节点并验证 Top-N 收集的位移（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "R": "string",
-          "GL": "string",
-          "P": "string",
-          "GP": "string",
+          "Rel": "string",
+          "GroupLabel": "string",
+          "Prop": "string",
+          "GroupProp": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
           "VALUE4": "string",
           "VALUE5": "string",
-          "L": "string"
+          "Label": "string"
         },
         "example": "批量删除多个节点，直接查询剩余节点属性验证删除后的图状态。",
-        "validation": "MATCH (g:$GL)<-[:$R]-(n:$L) RETURN n.$PROP_ID AS val"
+        "validation": "MATCH (g:$GroupLabel)<-[:$Rel]-(n:$Label) RETURN n.$PROP_ID AS val"
       },
       {
         "difficulty": 9,
         "title": "批量删除节点并验证跨标签 Join 阈值过滤（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L2 {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L2 {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label2 {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P1": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop1": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -3103,7 +3103,7 @@
           "THRESHOLD": "integer"
         },
         "example": "批量删除多个匹配项，验证是否有主节点因匹配数跌破阈值而从结果中消失。",
-        "validation": "MATCH (n:$L2) RETURN count(n) AS cnt"
+        "validation": "MATCH (n:$Label2) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 10,
@@ -3116,16 +3116,16 @@
           "MATCH (n {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "SL": "string",
-          "EL": "string",
+          "StartLabel": "string",
+          "EndLabel": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
           "VALUE4": "string",
           "VALUE5": "string",
-          "SP": "string",
-          "SV": "string",
+          "StartProp": "string",
+          "StartVal": "string",
           "MIN_HOPS": "integer",
           "MAX_HOPS": "integer"
         },
@@ -3136,16 +3136,16 @@
         "difficulty": 11,
         "title": "批量删除节点并验证无关标签的最小值（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L1 {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -3154,25 +3154,25 @@
           "VALUE5": "string"
         },
         "example": "批量删除多个节点后，验证其他无关标签的属性最小值是否保持稳定。",
-        "validation": "MATCH (n:$L1) RETURN count(n) AS cnt"
+        "validation": "MATCH (n:$Label1) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 12,
         "title": "批量删除关系并验证无关路径的计数（每行删除不同目标上的边）",
         "template": [
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE1}) DELETE r",
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE2}) DELETE r",
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE3}) DELETE r",
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE4}) DELETE r",
-          "MATCH (a)-[r:$R1]->(b:$L1 {$PROP_ID: $VALUE5}) DELETE r"
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE1}) DELETE r",
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE2}) DELETE r",
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE3}) DELETE r",
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE4}) DELETE r",
+          "MATCH (a)-[r:$Rel1]->(b:$Label1 {$PROP_ID: $VALUE5}) DELETE r"
         ],
         "parameters": {
-          "L1": "string",
-          "L3": "string",
-          "L4": "string",
+          "Label1": "string",
+          "Label3": "string",
+          "Label4": "string",
           "PROP_ID": "string",
-          "R1": "string",
-          "R2": "string",
+          "Rel1": "string",
+          "Rel2": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
@@ -3180,22 +3180,22 @@
           "VALUE5": "string"
         },
         "example": "批量删除多段关系（每行不同目标节点）后，验证其他无关路径类型的数量是否保持不变。",
-        "validation": "MATCH ()-[r:$R1]->() RETURN count(r) AS cnt"
+        "validation": "MATCH ()-[r:$Rel1]->() RETURN count(r) AS cnt"
       },
       {
         "difficulty": 13,
         "title": "批量删除节点并验证无关标签的聚合统计（每行删除不同节点）",
         "template": [
-          "MATCH (n:$L1 {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L1 {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label1 {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
-          "P2": "string",
+          "Label1": "string",
+          "Label2": "string",
+          "Prop2": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
@@ -3204,48 +3204,48 @@
           "VALUE5": "string"
         },
         "example": "批量删除多个不同节点后，验证其他无关标签的平均值和计数是否保持稳定。",
-        "validation": "MATCH (n:$L1) RETURN count(n) AS cnt"
+        "validation": "MATCH (n:$Label1) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 14,
         "title": "批量删除不同节点并验证分组成员数",
         "template": [
-          "MATCH (n:$L {$PROP_ID: $VALUE1}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE2}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE3}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE4}) DETACH DELETE n",
-          "MATCH (n:$L {$PROP_ID: $VALUE5}) DETACH DELETE n"
+          "MATCH (n:$Label {$PROP_ID: $VALUE1}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE2}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE3}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE4}) DETACH DELETE n",
+          "MATCH (n:$Label {$PROP_ID: $VALUE5}) DETACH DELETE n"
         ],
         "parameters": {
-          "R": "string",
-          "GL": "string",
+          "Rel": "string",
+          "GroupLabel": "string",
           "PROP_ID": "string",
           "VALUE1": "string",
           "VALUE2": "string",
           "VALUE3": "string",
           "VALUE4": "string",
           "VALUE5": "string",
-          "L": "string"
+          "Label": "string"
         },
         "example": "批量删除多个不同节点，验证所属分组下成员数量的减少。",
-        "validation": "MATCH (g:$GL)<-[:$R]-(n:$L) RETURN count(n) AS cnt"
+        "validation": "MATCH (g:$GroupLabel)<-[:$Rel]-(n:$Label) RETURN count(n) AS cnt"
       },
       {
         "difficulty": 15,
         "title": "批量删除不同关系并验证路径计数",
         "template": [
-          "MATCH (a:$L1 {$PROP_ID1: $AID1})-[r:$R]->(b:$L2 {$PROP_ID2: $BID1}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID2})-[r:$R]->(b:$L2 {$PROP_ID2: $BID2}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID3})-[r:$R]->(b:$L2 {$PROP_ID2: $BID3}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID4})-[r:$R]->(b:$L2 {$PROP_ID2: $BID4}) DELETE r",
-          "MATCH (a:$L1 {$PROP_ID1: $AID5})-[r:$R]->(b:$L2 {$PROP_ID2: $BID5}) DELETE r"
+          "MATCH (a:$Label1 {$PROP_ID1: $AID1})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID1}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID2})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID2}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID3})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID3}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID4})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID4}) DELETE r",
+          "MATCH (a:$Label1 {$PROP_ID1: $AID5})-[r:$Rel]->(b:$Label2 {$PROP_ID2: $BID5}) DELETE r"
         ],
         "parameters": {
-          "L1": "string",
-          "L2": "string",
+          "Label1": "string",
+          "Label2": "string",
           "PROP_ID1": "string",
           "PROP_ID2": "string",
-          "R": "string",
+          "Rel": "string",
           "AID1": "string",
           "AID2": "string",
           "AID3": "string",
@@ -3258,7 +3258,7 @@
           "BID5": "string"
         },
         "example": "批量删除多段关系（每行不同节点对），验证路径或链条数量的减少。",
-        "validation": "MATCH (a:$L1)-[:$R]->(b:$L2) RETURN count(*) AS cnt"
+        "validation": "MATCH (a:$Label1)-[:$Rel]->(b:$Label2) RETURN count(*) AS cnt"
       }
     ]
   }

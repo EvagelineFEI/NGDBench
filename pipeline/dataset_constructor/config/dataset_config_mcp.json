@@ -1,0 +1,21 @@
+{
+  "system": "This dataset comes from an MCP tool-trajectory benchmark.",
+  "dataset_description": "Node names may contain task-specific prefixes so the same tool or action can be disambiguated across many tasks.",
+  "node_prefix_rules": {
+    "birthday_card_food_emoji_": "nodes related to the birthday-card food emoji task",
+    "stellarpay_company_research_": "nodes related to the Stellarpay company research task",
+    "tool_": "generic tool-event nodes when this prefix is present in the source graph"
+  },
+  "translation_notes": [
+    "When a prefix carries task meaning, reflect that in the translation instead of treating it as arbitrary noise.",
+    "Keep the description concise and explain node roles in natural language.",
+    "For example: cypher: MATCH (a:entity {id: 'skybuilder96_creator_profile_no_results_found_varied'})-[:produces_output *1..2]-(b:entity) RETURN a, b. NLP:For the skybuilder96_creator task, find the entity representing profile_no_results_found_varied and retrieve the outputs related to it within one or two hops."
+  ],
+  "judge_notes": [
+    "First understand the query intent, then determine whether the evidence in mention_in_nodes is sufficient to support the answer.",
+    "Prioritize query, answer, and mention_in_nodes as the only evidence sources. Do not rely on outside knowledge or unstated assumptions.",
+    "If the answer is fully correct and clearly supported by the evidence, assign the label true and rewrite gnd as a concise natural-language answer.",
+    "If the answer is incorrect and the evidence contradicts it, assign the label false and rewrite gnd as a concise natural-language answer."
+
+  ]
+}

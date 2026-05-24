@@ -1,0 +1,22 @@
+{
+  "system": "This dataset comes from an economics and finance document knowledge-graph benchmark.",
+  "data_file": "/home/ylivm/ngdb/ngdb_benchmark/pipeline/query_gen/query/final/econ/econ_agg_mention_in_results.json",
+  "dataset_description": "The file contains aggregated Cypher query results over an economics knowledge graph. Each record pairs a graph query with its structured answer and supporting text snippets from source documents.",
+  "record_fields": {
+    "template_id": "Identifier of the query template instance.",
+    "template_type": "Aggregation query family, such as basic_expand_aggregation, impact_agg, or correlation_agg.",
+    "query": "Cypher query executed against entity nodes and typed relationships.",
+    "answer": "Structured query result, usually including counts and collected entity ids.",
+    "query_node_ids": "Entity ids used as query anchors.",
+    "answer_node_ids": "Entity ids expected in the returned answer.",
+    "mention_in_nodes": "Source-document snippets that mention or support the queried entities and relationships.",
+    "error": "Execution error information; null means the query executed successfully."
+  },
+  "judge_notes": [
+    "Use query, answer, query_node_ids, answer_node_ids, and mention_in_nodes as the primary evidence.",
+    "For aggregation queries, verify both the count field and the collected entity list.",
+    "Entity ids are often natural-language economic, financial, corporate, accounting, or policy phrases rather than normalized database identifiers.",
+    "mention_in_nodes may contain long document fragments; focus on whether they support the queried relationship and returned entities.",
+    "Do not rely on outside knowledge when judging answer correctness."
+  ]
+}

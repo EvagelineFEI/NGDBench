@@ -63,25 +63,26 @@
             },
             {
                 "id": "T002",
-                "template": "MATCH (n:$LABEL {$PROP: $VALUE})-[:$REL_TYPE]->(m:$L2) RETURN avg(m.$PROP2) AS avg_value",
+                "template": "MATCH (n:$LABEL {$PROP: $VALUE})-[:$REL_TYPE]->(m:$LABEL2) RETURN avg(m.$RET_PROP2) AS avg_value",
                 "parameters": {
                     "LABEL": "string",
                     "PROP": "string",
                     "VALUE": "string",
                     "REL_TYPE": "string",
-                    "L2": "string",
-                    "PROP2": "string"
+                    "LABEL2": "string",
+                    "RET_PROP2": "string"
                 }
             },
             {
                 "id": "T003",
-                "template": "MATCH (n:$LABEL {$PROP: $VALUE})-[:$REL_TYPE]->(m) RETURN sum(m.$PROP2) AS total",
+                "template": "MATCH (n:$LABEL {$PROP: $VALUE})-[:$REL_TYPE]->(m:$LABEL2) RETURN sum(m.$RET_PROP2) AS total",
                 "parameters": {
                     "LABEL": "string",
                     "PROP": "string",
                     "VALUE": "string",
                     "REL_TYPE": "string",
-                    "PROP2": "string"
+                    "LABEL2": "string",
+                    "RET_PROP2": "string"
                 }
             }
         ]
@@ -189,37 +190,37 @@
             },
             {
                 "id": "T012",
-                "template": "MATCH (n:$LABEL) WHERE (n)-[:$REL1]->(:$L1) OR (n)-[:$REL2]->(:$L2) RETURN count(n) AS cnt",
+                "template": "MATCH (n:$LABEL) WHERE (n)-[:$REL1]->(:$LABEL2) OR (n)-[:$REL2]->(:$LABEL3) RETURN count(n) AS cnt",
                 "parameters": {
                     "LABEL": "string",
                     "REL1": "string",
                     "REL2": "string",
-                    "L1": "string",
-                    "L2": "string"
+                    "LABEL2": "string",
+                    "LABEL3": "string"
                 }
             },
             {
                 "id": "T013",
-                "template": "MATCH (n:$LABEL) WHERE NOT (n)-[:$REL1]->(:$L1) OR (n)-[:$REL2]->(:$L2) RETURN count(n)",
+                "template": "MATCH (n:$LABEL) WHERE NOT (n)-[:$REL1]->(:$LABEL2) OR (n)-[:$REL2]->(:$LABEL3) RETURN count(n)",
                 "parameters": {
                     "LABEL": "string",
                     "REL1": "string",
                     "REL2": "string",
-                    "L1": "string",
-                    "L2": "string"
+                    "LABEL2": "string",
+                    "LABEL3": "string"
                 }
             },
             {
                 "id": "T014",
-                "template": "MATCH (n:$LABEL) WHERE n.$PROP $OP $VAL OR (n)-[:$REL]->(:$L2) RETURN avg(n.$NUM_PROP)",
+                "template": "MATCH (n:$LABEL) WHERE n.$PROP $OP $VAL OR (n)-[:$REL]->(:$LABEL2) RETURN avg(n.$RET)",
                 "parameters": {
                     "LABEL": "string",
                     "PROP": "string",
                     "OP": "string",
                     "VAL": "string",
                     "REL": "string",
-                    "L2": "string",
-                    "NUM_PROP": "string"
+                    "LABEL2": "string",
+                    "RET": "string"
                 }
             }
         ]
@@ -255,7 +256,7 @@
             },
             {
                 "id": "T006",
-                "template": "MATCH (a:$LABEL1)-[:$REL1]->(b:$LABEL2)-[:$REL2]->(c:$LABEL3)-[:$REL3]->(d:$LABEL4) RETURN avg(d.$NUM_PROP)",
+                "template": "MATCH (a:$LABEL1)-[:$REL1]->(b:$LABEL2)-[:$REL2]->(c:$LABEL3)-[:$REL3]->(d:$LABEL4) RETURN avg(d.$RET)",
                 "parameters": {
                     "LABEL1": "string",
                     "LABEL2": "string",
@@ -264,7 +265,7 @@
                     "REL1": "string",
                     "REL2": "string",
                     "REL3": "string",
-                    "NUM_PROP": "string"
+                    "RET": "string"
                 }
             },
             {
@@ -302,13 +303,16 @@
             },
             {
                 "id": "T011",
-                "template": "MATCH (start:$START_LABEL {$START_PROP: $START_VALUE}) MATCH p = (start) ((n1:$L1)<-[:$R1]-(r:$REL_NODE_LABEL)-[:$R2]->(n2:$L2) WHERE r.$NODE_PROP = $NODE_VALUE){$MIN_HOPS..$MAX_HOPS} (end:$END_LABEL) RETURN count(p) AS path_count",
+                "template": "MATCH (start:$START_LABEL {$START_PROP: $START_VALUE}) MATCH p = (start) ((n1:$LABEL2)<-$D1[:$R1]-$D2(r:$REL_NODE_LABEL)-$D3[:$R2]->(n2:$LABEL3) WHERE r.$NODE_PROP = $NODE_VALUE){$MIN_HOPS..$MAX_HOPS} (end:$END_LABEL) RETURN count(p) AS path_count",
                 "parameters": {
                     "START_LABEL": "string",
                     "START_PROP": "string",
                     "START_VALUE": "string",
-                    "L1": "string",
-                    "L2": "string",
+                    "LABEL2": "string",
+                    "LABEL3": "string",
+                    "D1": "string",
+                    "D2": "string",
+                    "D3": "string",
                     "R1": "string",
                     "R2": "string",
                     "REL_NODE_LABEL": "string",
@@ -362,6 +366,18 @@
     {
         "type": "pipelined",
         "templates": [
+            {
+                "id": "T001",
+                "template": "MATCH (a:$LABEL1 {$PROP1: $VALUE})-[:$REL1]->(b:$LABEL2) WITH b, count(*) AS cnt WHERE cnt > 0 RETURN b.$RET_PROP1",
+                "parameters": {
+                    "LABEL1": "string",
+                    "LABEL2": "string",
+                    "PROP1": "string",
+                    "VALUE": "string",
+                    "REL1": "string",
+                    "RET_PROP1": "string"
+                }
+            },
             {
                 "id": "T002",
                 "template": "MATCH (a:$LABEL1 {$PROP1: $VALUE})-[:$REL1]->(b:$LABEL2) WITH b MATCH (b)-[:$REL2]->(c:$LABEL3) WHERE c.$FILTER_PROP = $FILTER_VAL RETURN count(*) AS total_cnt",
@@ -463,7 +479,7 @@
         "templates": [
             {
                 "id": "T002",
-                "template": "MATCH (a:$LABEL1)-[:$REL1]->(b:$LABEL2) WITH a, $AGG_FUNC1(b.$NUM_PROP1) AS metric1 WHERE metric1 $OP1 $THRESHOLD1 RETURN a.$RET_PROP1 AS EntityName, '$CATEGORY1' AS Category, metric1 AS ValueScore UNION ALL MATCH (c:$LABEL3)<-[:$REL2]-(d:$LABEL4) WITH c, $AGG_FUNC2(d.$NUM_PROP2) AS metric2 WHERE metric2 $OP2 $THRESHOLD2 RETURN c.$RET_PROP2 AS EntityName, '$CATEGORY2' AS Category, metric2 AS ValueScore",
+                "template": "MATCH (a:$LABEL1)-[:$REL1]->(b:$LABEL2) WITH a, $AGG_FUNC1(b.$RET_PROP1) AS metric1 WHERE metric1 $OP1 $THRESHOLD1 RETURN a.$PROP1 AS EntityName, '$CATEGORY1' AS Category, metric1 AS ValueScore UNION ALL MATCH (c:$LABEL3)<-[:$REL2]-(d:$LABEL4) WITH c, $AGG_FUNC2(d.$RET_PROP3) AS metric2 WHERE metric2 $OP2 $THRESHOLD2 RETURN c.$PROP2 AS EntityName, '$CATEGORY2' AS Category, metric2 AS ValueScore",
                 "parameters": {
                     "LABEL1": "string",
                     "LABEL2": "string",
@@ -472,26 +488,26 @@
                     "REL1": "string",
                     "REL2": "string",
                     "AGG_FUNC1": "string",
-                    "NUM_PROP1": "string",
-                    "OP1": "string",
-                    "THRESHOLD1": "string",
                     "RET_PROP1": "string",
+                    "OP1": "string",
+                    "THRESHOLD1": "integer",
+                    "PROP1": "string",
                     "CATEGORY1": "string",
                     "AGG_FUNC2": "string",
-                    "NUM_PROP2": "string",
+                    "RET_PROP3": "string",
                     "OP2": "string",
-                    "THRESHOLD2": "string",
-                    "RET_PROP2": "string",
+                    "THRESHOLD2": "integer",
+                    "PROP2": "string",
                     "CATEGORY2": "string"
                 }
             },
             {
                 "id": "T003",
-                "template": "MATCH (a:$L1) RETURN count(a.$P) AS cnt UNION MATCH (b:$L2) RETURN count(b.$P) AS cnt",
+                "template": "MATCH (a:$LABEL1) RETURN count(a.$PROP) AS cnt UNION MATCH (b:$LABEL2) RETURN count(b.$PROP) AS cnt",
                 "parameters": {
-                    "L1": "string",
-                    "L2": "string",
-                    "P": "string"
+                    "LABEL1": "string",
+                    "LABEL2": "string",
+                    "PROP": "string"
                 }
             }
         ]

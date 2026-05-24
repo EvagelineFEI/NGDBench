@@ -115,4 +115,4 @@ reports:
 # 日志配置
 logging:
   level: "INFO"  # "DEBUG", "INFO", "WARNING", "ERROR"
-  file: "ngdb_framework.log"
+  file: "ngdb_benchmark.log"

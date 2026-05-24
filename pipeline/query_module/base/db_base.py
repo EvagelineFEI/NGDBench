@@ -2,19 +2,12 @@
 数据库连接和查询执行基类
 """
 import json
-import os
-import sys
 from typing import List, Dict, Any, Optional
-from neo4j import GraphDatabase
 
-# 确保可以导入清洗函数 cleaner.clean_normal_answer
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-# 从 query_module/base/ 回到 pipeline/ 目录
-PROJECT_ROOT = os.path.dirname(os.path.dirname(CURRENT_DIR))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-from handler.cleaner import clean_normal_answer
+try:
+    from ...handler.cleaner import clean_normal_answer
+except ImportError:  # pragma: no cover - direct script execution
+    from handler.cleaner import clean_normal_answer
 
 
 def _convert_neo4j_to_dict(value: Any, node_id_key: str = "_node_id") -> Any:
@@ -161,6 +154,13 @@ class DatabaseExecutor:
     def connect(self):
         """建立数据库连接"""
         try:
+            try:
+                from neo4j import GraphDatabase
+            except ImportError as exc:
+                raise RuntimeError(
+                    "neo4j is required to execute database queries. Install project dependencies first."
+                ) from exc
+
             self.driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password))
             # 验证连接
             with self.driver.session() as session:

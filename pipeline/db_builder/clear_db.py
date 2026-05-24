@@ -3,7 +3,10 @@
 用法: python clear_db.py
 """
 
-from build_base import Neo4jGraphBuilder
+try:
+    from .build_base import Neo4jGraphBuilder
+except ImportError:  # pragma: no cover - direct script execution
+    from build_base import Neo4jGraphBuilder
 
 NEO4J_URI = "bolt://localhost:7691"
 NEO4J_USER = "neo4j"

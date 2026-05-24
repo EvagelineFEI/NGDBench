@@ -10,8 +10,6 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 import networkx as nx
-from neo4j import GraphDatabase
-from neo4j.exceptions import Neo4jError
 
 
 class Neo4jGraphBuilder:
@@ -44,6 +42,13 @@ class Neo4jGraphBuilder:
                 level=logging.INFO,
                 format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             )
+        try:
+            from neo4j import GraphDatabase
+        except ImportError as exc:
+            raise RuntimeError(
+                "neo4j is required to build graph databases. Install project dependencies first."
+            ) from exc
+
         self.driver = GraphDatabase.driver(self.uri, auth=(self.user, self.password))
         self.logger.info("Neo4jGraphBuilder 初始化完成，目标 URI: %s", self.uri)
 
@@ -151,7 +156,7 @@ class Neo4jGraphBuilder:
                         )
             
             self.logger.info("数据库准备完成: %s", default_db)
-        except Neo4jError as exc:
+        except Exception as exc:
             self.logger.error("准备数据库失败: %s", exc)
             raise
 

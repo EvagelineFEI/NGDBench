@@ -5,10 +5,11 @@ import os
 import sys
 import json
 
-# 添加当前目录到路径，确保可以导入 db_base
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from db_base import DatabaseExecutor
+try:
+    from .base import DatabaseExecutor
+except ImportError:  # pragma: no cover - direct script execution
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from base import DatabaseExecutor
 
 
 def filter_anti_queries(queries: list) -> list:

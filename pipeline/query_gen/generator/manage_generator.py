@@ -9,10 +9,8 @@ import json
 import random
 import re
 import logging
-import subprocess
-import os
 from typing import Dict, List, Any, Optional, Tuple, Set, Union
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from neo4j import GraphDatabase
 
 # 导入 query_generator 中的相关类
@@ -20,9 +18,10 @@ from .query_generator import (
     SchemaAnalyzer,
     QueryBuilder,
     QueryExecutor,
-    QueryResult,
     DEFAULT_EXCLUDED_RETURN_PROPS,
     DEFAULT_EXCLUDED_LABELS,
+    Node,
+    Relationship,
     logger
 )
 
@@ -260,7 +259,7 @@ class ManagementQueryBuilder:
         constraints = self.query_builder._get_template_constraints(temp_template.template)
         # 先预填 REL，使 GROUP_LABEL/GL 等 end 标签在节点组填充时能按关系的合法 end 采样（避免 Company_Guarantee_Company->Account）
         # MATCH (a:L1),(b:L2) CREATE (a)-[:R1]->(b) 型：R1 必须与 (L1,L2) 匹配，模板中已约定 L1/L2 在 R1 之前，此处不预填 R1，主循环会按顺序先填 L1/L2 再填 R1
-        pair_label_params = {'L1', 'L2', 'L3', 'L4'}
+        pair_label_params = {'Label1', 'Label2', 'Label3', 'Label4', 'Label5'}
         for start, rel, end in constraints:
             if rel and rel in template.parameters and rel not in params_used:
                 if start in pair_label_params and end in pair_label_params:
@@ -288,13 +287,13 @@ class ManagementQueryBuilder:
             # AID1-5/BID1-5 必须从 L1+PROP_ID1 / L2+PROP_ID2 的 sample_values 采样，不能合成 id_
             # 若 PROP_ID1/PROP_ID2 尚未填充则优先生成，否则 _generate_param_value('AID'/'BID') 会回退到合成值
             if param_name.startswith('AID') or param_name == 'AID':
-                for dep in ('L1', 'PROP_ID1'):
+                for dep in ('Label1', 'PROP_ID1'):
                     if dep in template.parameters and dep not in params_used:
                         dep_val = self.query_builder._generate_param_value(dep, temp_template, params_used)
                         if dep_val is not None:
                             params_used[dep] = dep_val
             if param_name.startswith('BID') or param_name == 'BID':
-                for dep in ('L2', 'PROP_ID2'):
+                for dep in ('Label2', 'PROP_ID2'):
                     if dep in template.parameters and dep not in params_used:
                         dep_val = self.query_builder._generate_param_value(dep, temp_template, params_used)
                         if dep_val is not None:
@@ -303,7 +302,7 @@ class ManagementQueryBuilder:
             # VALUE/VALUE1-5 与 PROP_ID 绑定时（如 {$PROP_ID: $VALUE1}）必须从 PROP_ID 对应属性采样，
             # 故优先生成 PROP_ID 和 LABEL/L1/L 等，避免 VALUE 采到 PROP 的 sample_values（如 loanId 采成 loanUsage 的值）
             if param_name in ('VALUE', 'VALUE1', 'VALUE2', 'VALUE3', 'VALUE4', 'VALUE5'):
-                for dep in ('PROP_ID', 'LABEL', 'L', 'L1', 'L2', 'L3', 'L4'):
+                for dep in ('PROP_ID', 'LABEL', 'Label', 'Label1', 'Label2', 'Label3', 'Label4', 'Label5'):
                     if dep in template.parameters and dep not in params_used:
                         dep_val = self.query_builder._generate_param_value(dep, temp_template, params_used)
                         if dep_val is not None:
@@ -390,11 +389,11 @@ class ManagementQueryBuilder:
         base_name = match.group(1)  # 基础名称：VALUE, VAL, AID, BID等
         index = int(match.group(2))  # 索引：1, 2, 3, 4, 5等
         
-        # 处理 VALUE1-5, VAL1-5, V1-5 等（对应 VALUE, VAL, V）
-        if base_name in ('VALUE', 'VAL', 'V'):
-            # 使用原有的 VALUE/VAL/V 生成逻辑（从对应 LABEL 的 PROP 采样，保证每行不同）
-            base_param = 'VALUE' if base_name == 'VALUE' else ('VAL' if base_name == 'VAL' else 'V')
-            if base_param in current_params and base_name != 'V':
+        # 处理 VALUE1-5, VAL1-5, Val1-5 等（对应 VALUE, VAL, Val）
+        if base_name in ('VALUE', 'VAL', 'Val'):
+            # 使用原有的 VALUE/VAL/Val 生成逻辑（从对应 LABEL 的 PROP 采样，保证每行不同）
+            base_param = 'VALUE' if base_name == 'VALUE' else ('VAL' if base_name == 'VAL' else 'Val')
+            if base_param in current_params and base_name != 'Val':
                 base_value = current_params[base_param]
                 # 如果是数值类型，生成不同的数值
                 if isinstance(base_value, (int, float)):
@@ -405,7 +404,7 @@ class ManagementQueryBuilder:
                 # 如果是字符串类型，生成不同的字符串
                 elif isinstance(base_value, str):
                     return f"{base_value}_{index}"
-            # 从对应 LABEL 的 PROP 采样（V1..V5 每行不同）
+            # 从对应 LABEL 的 PROP 采样（Val1..Val5 每行不同）
             return self.query_builder._generate_param_value(base_param, temp_template, current_params)
         
         # 处理 AID1-5, BID1-5 等（对应 AID, BID）
@@ -428,7 +427,8 @@ class ManagementQueryBuilder:
             # 这些参数通常是 ID 列表，从数据库中采样一些 ID 值
             # 尝试从已生成的参数中获取标签信息
             label = None
-            for label_key in ['LABEL', 'L1', 'L2', 'L', 'GL', 'SL', 'EL']:
+            for label_key in ['LABEL', 'Label', 'Label1', 'Label2', 'Label3', 'Label4', 'Label5',
+                              'GroupLabel', 'StartLabel', 'EndLabel', 'RefLabel']:
                 if label_key in current_params:
                     label = current_params[label_key]
                     break
@@ -468,16 +468,28 @@ class ManagementQueryBuilder:
         replacements = {}
         
         # 不需要加引号的参数名（标签、属性名、关系类型等）
-        no_quote_params = {'LABEL', 'LABEL1', 'LABEL2', 'LABEL3', 'LABEL4', 
-                          'START_LABEL', 'END_LABEL', 'GROUP_LABEL',
-                          'L', 'L1', 'L2', 'L3', 'L4', 'SL', 'EL', 'RL', 'GL',
-                          'PROP', 'PROP1', 'PROP2', 'PROP_ID', 'PROP_ID1', 'PROP_ID2',
-                          'GROUP_PROP', 'FILTER_PROP', 'NODE_PROP', 'START_PROP',
-                          'P', 'P1', 'P2', 'SP', 'NP', 'BP', 'GP', 'RP',
-                          'REL', 'REL_TYPE', 'REL1', 'REL2', 'REL3', 'R', 'R1', 'R2', 'R3',
-                          'REL_PROP',  # 关系属性名，不需要引号
-                          'MIN_HOPS', 'MAX_HOPS', 'D1', 'D2', 'D3', 'OP', 'OP1', 'OP2',
-                          'AGG_FUNC', 'AGG_FUNC1', 'AGG_FUNC2', 'NUM_PROP', 'NUM_PROP1', 'NUM_PROP2'}
+        no_quote_params = {
+            # Labels (fully descriptive only; legacy shorthand L/L1/L2/GL/SL/EL/RL removed)
+            'LABEL', 'LABEL1', 'LABEL2', 'LABEL3', 'LABEL4',
+            'Label', 'Label1', 'Label2', 'Label3', 'Label4', 'Label5',
+            'START_LABEL', 'END_LABEL', 'GROUP_LABEL', 'TARGET_LABEL',
+            'StartLabel', 'EndLabel', 'GroupLabel', 'RefLabel',
+            # Properties (names only; not values)
+            'PROP', 'PROP1', 'PROP2', 'PROP_ID', 'PROP_ID1', 'PROP_ID2',
+            'Prop', 'Prop1', 'Prop2',
+            'TARGET_PROP_ID', 'TARGET_PROP_ID1', 'TARGET_PROP_ID2',
+            'GROUP_PROP', 'FILTER_PROP', 'NODE_PROP', 'START_PROP',
+            'BaseProp', 'StartProp', 'NumProp', 'GroupProp',
+            'UPDATE_PROP', 'RET_PROP', 'REF_PROP',
+            # Relationships
+            'REL', 'REL_TYPE', 'REL1', 'REL2', 'REL3',
+            'Rel', 'Rel1', 'Rel2', 'Rel3',
+            'REL_PROP', 'RelProp',
+            # Control / numeric helpers (names, not values)
+            'MIN_HOPS', 'MAX_HOPS', 'D1', 'D2', 'D3', 'OP', 'OP1', 'OP2',
+            'AGG_FUNC', 'AGG_FUNC1', 'AGG_FUNC2',
+            'NUM_PROP', 'NUM_PROP1', 'NUM_PROP2',
+        }
         
         # 列表参数名
         list_params = {'LIST', 'IDS', 'A_IDS', 'B_IDS'}
@@ -549,6 +561,7 @@ class ManageGenerator:
         neo4j_admin_path: Optional[str] = None,
         graph_file: Optional[str] = None,
         validation_mode: str = "agg",
+        database_recovery_mode: str = "transaction-rollback",
     ):
         """
         初始化管理操作查询生成器
@@ -560,11 +573,22 @@ class ManageGenerator:
             template_path: 模板文件路径
             exclude_internal_id_as_return: 是否在返回属性中排除内部ID字段
             dataset: 数据集名称
-            database_backup_path: 数据库备份路径（用于neo4j-admin restore）
+            database_backup_path: 兼容旧参数，当前不使用容器/neo4j-admin恢复
             database_name: 数据库名称，默认为"neo4j"
-            neo4j_admin_path: neo4j-admin命令的完整路径，如果为None则使用系统PATH中的neo4j-admin
+            neo4j_admin_path: 兼容旧参数，当前不使用容器/neo4j-admin恢复
             graph_file: 图文件路径（.gpickle或.graphml），用于在恢复数据库后重新构建数据库
+            database_recovery_mode: 数据库恢复方式：
+                transaction-rollback=样本在事务内执行并回滚（默认，高效且不依赖容器）
+                local-rebuild=使用 Neo4jGraphBuilder 从 graph_file 清库重建
+                none=不额外恢复
         """
+        allowed_recovery_modes = {"transaction-rollback", "local-rebuild", "none"}
+        if database_recovery_mode not in allowed_recovery_modes:
+            raise ValueError(
+                f"不支持的 database_recovery_mode: {database_recovery_mode}，"
+                f"可选值: {sorted(allowed_recovery_modes)}"
+            )
+
         self.uri = uri
         self.user = user
         self.password = password
@@ -589,8 +613,10 @@ class ManageGenerator:
         self.results: List[ManagementQueryResult] = []
         
         # 数据库恢复相关
-        self.database_backup_path: Optional[str] = None  # 数据库备份路径（如果使用文件备份）
-        self.use_database_restore: bool = True  # 是否在每个 batch 后恢复数据库
+        self.database_backup_path: Optional[str] = database_backup_path
+        self.neo4j_admin_path: Optional[str] = neo4j_admin_path
+        self.database_recovery_mode = database_recovery_mode
+        self.use_database_restore: bool = database_recovery_mode != "none"
         self.database_name = database_name  # 保存数据库名称
         self.graph_file: Optional[str] = graph_file  # 图文件路径，用于在恢复数据库后重新构建
         
@@ -621,7 +647,11 @@ class ManageGenerator:
         # 分析Schema
         self.schema = SchemaAnalyzer(self.driver)
         self.schema.analyze()
-        
+
+        # 从 YAML schema 文件加载权威三元组约束（覆盖 DB 噪声）
+        if self.dataset:
+            self.schema.load_schema_from_yaml(self.dataset)
+
         # 加载模板
         self.template_loader = ManagementTemplateLoader(self.template_path)
         self.template_loader.load()
@@ -644,11 +674,16 @@ class ManageGenerator:
         """
         恢复数据库到初始状态
         
-        使用 Neo4jGraphBuilder 的 _prepare_database(recreate=True) 方法来清空数据库。
-        如果提供了 graph_file，则在清空后使用 build_from_file 重新构建数据库。
-        每次 batch 运行之后调用此方法重新准备数据库。
+        不调用容器或 neo4j-admin restore。恢复方式由 database_recovery_mode 控制：
+        - transaction-rollback：样本级恢复依赖事务 rollback，这里不做额外操作。
+        - local-rebuild：使用 Neo4jGraphBuilder 清空数据库，并从 graph_file 重新构建。
+        - none：不做恢复。
         """
         if not self.use_database_restore:
+            return
+
+        if self.database_recovery_mode == "transaction-rollback":
+            logger.info("当前恢复模式为 transaction-rollback，样本执行结束时已通过事务回滚恢复数据库")
             return
         
         try:
@@ -659,31 +694,260 @@ class ManageGenerator:
                     user=self.user,
                     password=self.password
                 )
-            
-            # 使用 Neo4jGraphBuilder 的 _prepare_database 方法清空数据库
-            logger.info("正在使用 Neo4jGraphBuilder 重新准备数据库（清空所有数据）...")
-            self.db_builder._prepare_database(recreate=True)
-            logger.info("数据库已清空完成")
-            
-            # 如果提供了 graph_file，则重新构建数据库
+            # local-rebuild：如果提供了 graph_file，直接由 build_from_file 负责清空并重建。
             if self.graph_file:
                 graph_path = Path(self.graph_file)
                 if graph_path.exists():
-                    logger.info(f"正在从图文件重新构建数据库: {graph_path}")
+                    logger.info(f"正在使用本地 Neo4jGraphBuilder 从图文件重建数据库: {graph_path}")
                     summary = self.db_builder.build_from_file(
                         file_path=graph_path,
                         dataset_name=self.dataset,
-                        recreate_database=False  # 已经清空过了，不需要再次清空
+                        recreate_database=True,
                     )
                     logger.info(f"数据库重新构建完成: {summary}")
                 else:
                     logger.warning(f"图文件不存在: {graph_path}，跳过数据库重建")
             else:
-                logger.info("未提供 graph_file，跳过数据库重建")
+                logger.info("未提供 graph_file，仅使用 Neo4jGraphBuilder 清空数据库")
+                self.db_builder._prepare_database(recreate=True)
             
         except Exception as e:
             logger.warning(f"数据库恢复过程中发生异常: {e}，继续执行...")
             # 不抛出异常，允许继续执行
+
+    def _execute_query_in_tx(
+        self,
+        tx,
+        query: str,
+        allow_empty: bool = False,
+    ) -> Tuple[bool, List[Dict], Optional[str]]:
+        """
+        在调用方提供的事务里执行查询，不提交事务。
+
+        管理查询生成需要 validation 能看到刚执行的写操作，但样本结束后又要恢复
+        初始状态；因此同一个样本内所有查询共享一个事务，最终由调用方 rollback。
+        """
+        try:
+            query_with_limit = self.executor._add_limit_if_needed(query) if self.executor else query
+            result = tx.run(query_with_limit)
+
+            records = []
+            record_count = 0
+
+            def _process_value(value):
+                if isinstance(value, Node):
+                    try:
+                        return dict(value)
+                    except (TypeError, AttributeError):
+                        try:
+                            return dict(value.items())
+                        except Exception:
+                            return {k: v for k, v in value.items()}
+                if isinstance(value, Relationship):
+                    try:
+                        return dict(value)
+                    except (TypeError, AttributeError):
+                        try:
+                            return dict(value.items())
+                        except Exception:
+                            return {k: v for k, v in value.items()}
+                if hasattr(value, '__iter__') and not isinstance(value, (str, dict, bytes)):
+                    try:
+                        if isinstance(value, (list, tuple)):
+                            return [_process_value(item) for item in value]
+                        return dict(value)
+                    except Exception:
+                        return str(value)
+                return value
+
+            max_results = self.executor.max_results if self.executor else 1000
+            for record in result:
+                if record_count >= max_results:
+                    logger.warning(f"查询结果超过最大限制 ({max_results})，已截断")
+                    result.consume()
+                    break
+
+                record_dict = {key: _process_value(record[key]) for key in record.keys()}
+                records.append(record_dict)
+                record_count += 1
+
+            if records or allow_empty:
+                return True, records, None
+            return False, [], "查询结果为空"
+
+        except Exception as e:
+            err_msg = str(e)
+            if 'transaction' in err_msg.lower() and ('timeout' in err_msg.lower() or 'time' in err_msg.lower()):
+                timeout = self.executor.timeout if self.executor else "unknown"
+                return False, [], f"查询执行超时 ({timeout}秒)"
+            return False, [], err_msg
+
+    def _execute_sample_with_rollback(
+        self,
+        template: ManagementTemplate,
+        template_query: Union[str, List[str]],
+        pre_query: Optional[str],
+        post_query: Optional[str],
+        validation_query: Optional[str],
+        params_used: Dict[str, Any],
+        has_validation: bool,
+        is_batch: bool,
+    ) -> Dict[str, Any]:
+        """
+        执行单个生成样本，并在样本结束后回滚所有写入。
+        """
+        if not self.driver:
+            raise RuntimeError("Neo4j driver 未初始化")
+
+        validation_queries_list: List[str] = []
+        validation_answers_list: List[List[Dict]] = []
+        validation_successes_list: List[bool] = []
+        validation_errors_list: List[Optional[str]] = []
+
+        pre_success, pre_answer, pre_error = True, [], None
+        post_success, post_answer, post_error = True, [], None
+        template_success: Union[bool, List[bool]] = False
+        template_error: Optional[Union[str, List[Optional[str]]]] = None
+        template_successes: List[bool] = []
+        template_errors: List[Optional[str]] = []
+        template_executed_queries: List[str] = []
+        template_answers: List[List[Dict]] = []
+
+        timeout = self.executor.timeout if self.executor else 298
+
+        with self.driver.session() as session:
+            tx = session.begin_transaction(timeout=timeout)
+            try:
+                if has_validation and validation_query:
+                    v_success, v_answer, v_error = self._execute_query_in_tx(
+                        tx,
+                        validation_query,
+                        allow_empty=True,
+                    )
+                    validation_queries_list.append(validation_query)
+                    validation_answers_list.append(v_answer)
+                    validation_successes_list.append(v_success)
+                    validation_errors_list.append(v_error)
+                    if not v_success:
+                        return {
+                            "pre_success": pre_success,
+                            "pre_answer": pre_answer,
+                            "pre_error": pre_error,
+                            "post_success": post_success,
+                            "post_answer": post_answer,
+                            "post_error": post_error,
+                            "template_success": template_success,
+                            "template_successes": template_successes,
+                            "template_error": template_error,
+                            "template_errors": template_errors,
+                            "template_executed_queries": template_executed_queries,
+                            "template_answers": template_answers,
+                            "validation_queries_list": validation_queries_list,
+                            "validation_answers_list": validation_answers_list,
+                            "validation_successes_list": validation_successes_list,
+                            "validation_errors_list": validation_errors_list,
+                            "overall_success": False,
+                        }
+
+                if not has_validation and pre_query and pre_query.strip():
+                    pre_success, pre_answer, pre_error = self._execute_query_in_tx(
+                        tx,
+                        pre_query,
+                        allow_empty=True,
+                    )
+
+                if is_batch:
+                    template_queries_list = template_query if isinstance(template_query, list) else [template_query]
+
+                    for idx, template_q in enumerate(template_queries_list, start=1):
+                        t_success, t_answer, t_error = self._execute_query_in_tx(
+                            tx,
+                            template_q,
+                            allow_empty=True,
+                        )
+                        template_successes.append(t_success)
+                        template_errors.append(t_error)
+                        template_executed_queries.append(template_q)
+                        template_answers.append(t_answer)
+
+                        if not t_success:
+                            continue
+
+                        if has_validation:
+                            if self.validation_mode == "no-agg" and template.has_validation():
+                                v_template = template.validation or ""
+                                v_template_idx = self._adapt_validation_for_index(v_template, idx)
+                                v_query = self.builder._replace_parameters(v_template_idx, params_used)
+                            else:
+                                v_query = validation_query
+                            v_success, v_answer, v_error = self._execute_query_in_tx(
+                                tx,
+                                v_query,
+                                allow_empty=True,
+                            )
+                            validation_queries_list.append(v_query)
+                            validation_answers_list.append(v_answer)
+                            validation_successes_list.append(v_success)
+                            validation_errors_list.append(v_error)
+
+                    template_success = all(template_successes)
+                    template_error = template_errors if not template_success else None
+                else:
+                    t_success, t_answer, t_error = self._execute_query_in_tx(
+                        tx,
+                        template_query,
+                        allow_empty=True,
+                    )
+                    template_success = t_success
+                    template_error = t_error
+                    template_executed_queries = [template_query]
+                    template_answers = [t_answer]
+
+                    if has_validation and t_success and validation_query:
+                        v_success, v_answer, v_error = self._execute_query_in_tx(
+                            tx,
+                            validation_query,
+                            allow_empty=True,
+                        )
+                        validation_queries_list.append(validation_query)
+                        validation_answers_list.append(v_answer)
+                        validation_successes_list.append(v_success)
+                        validation_errors_list.append(v_error)
+
+                if not has_validation and post_query and post_query.strip():
+                    post_success, post_answer, post_error = self._execute_query_in_tx(
+                        tx,
+                        post_query,
+                        allow_empty=True,
+                    )
+
+                if has_validation:
+                    all_validations_success = all(validation_successes_list) if validation_successes_list else True
+                    overall_success = bool(template_success) and all_validations_success
+                else:
+                    overall_success = bool(pre_success and template_success and post_success)
+
+                return {
+                    "pre_success": pre_success,
+                    "pre_answer": pre_answer,
+                    "pre_error": pre_error,
+                    "post_success": post_success,
+                    "post_answer": post_answer,
+                    "post_error": post_error,
+                    "template_success": template_success,
+                    "template_successes": template_successes,
+                    "template_error": template_error,
+                    "template_errors": template_errors,
+                    "template_executed_queries": template_executed_queries,
+                    "template_answers": template_answers,
+                    "validation_queries_list": validation_queries_list,
+                    "validation_answers_list": validation_answers_list,
+                    "validation_successes_list": validation_successes_list,
+                    "validation_errors_list": validation_errors_list,
+                    "overall_success": overall_success,
+                }
+            finally:
+                tx.rollback()
     
     def generate_samples(
         self,
@@ -734,8 +998,8 @@ class ManageGenerator:
         
         # 跟踪每个模板的使用情况
         template_stats = {}
-        for template in all_templates:
-            template_id = f"{template.operation}_{template.difficulty}"
+        for index, template in enumerate(all_templates):
+            template_id = f"{template.operation}_{template.difficulty}_{index}"
             template_stats[template_id] = {
                 'template': template,
                 'success_count': 0,
@@ -751,313 +1015,206 @@ class ManageGenerator:
             stream_file.write('[\n')
         
         try:
-            # 按顺序遍历每个模板
-            for template in all_templates:
-                # 如果已达到目标数量或超过最大尝试次数，停止
-                if len(self.results) >= target_count or attempts >= max_attempts:
-                    break
-                
-                template_id = f"{template.operation}_{template.difficulty}"
-                stats = template_stats[template_id]
-                
-                logger.info(f"开始处理模板 [{template.operation}] difficulty={template.difficulty}: {template.title}")
-                
-                # 对当前模板连续采样
-                while stats['success_count'] < success_per_template:
-                    # 检查是否达到全局限制
+            round_index = 0
+            while len(self.results) < target_count and attempts < max_attempts:
+                round_index += 1
+                round_progress = False
+                active_templates = 0
+
+                logger.info(
+                    f"开始第 {round_index} 轮模板采样，"
+                    f"当前已生成 {len(self.results)}/{target_count}"
+                )
+
+                for index, template in enumerate(all_templates):
                     if len(self.results) >= target_count or attempts >= max_attempts:
                         break
-                    
-                    # 检查是否超过最大失败次数
+
+                    template_id = f"{template.operation}_{template.difficulty}_{index}"
+                    stats = template_stats[template_id]
+
                     if stats['failure_count'] >= max_failures_per_template:
-                        logger.warning(f"模板 {template_id} 连续失败 {stats['failure_count']} 次，跳过该模板")
-                        break
-                    
-                    attempts += 1
-                    stats['usage_count'] += 1
-                    
-                    # 构建查询
-                    build_result = self.builder.build_queries(template)
-                    if len(build_result) == 5:
-                        pre_query, template_query, post_query, validation_query, params_used = build_result
-                    else:
-                        # 兼容旧格式（4个返回值）
-                        pre_query, template_query, post_query, params_used = build_result
-                        validation_query = None
+                        continue
 
-                    if not template_query:
-                        stats['failure_count'] += 1
-                        logger.debug(f"构建查询失败: {template_id}")
-                        continue
-                    
-                    # 检查是否有新格式的 validation 查询
-                    has_validation = template.has_validation() and validation_query
-                    
-                    # 检查是否为 batch 格式
-                    is_batch = template.is_batch()
-                    
-                    # 额外过滤：如果查询中出现针对 ID 相关属性的聚合（如 avg(a.companyId)），则跳过该样本
-                    if is_batch:
-                        # batch 格式：检查所有 template 查询和 validation 查询
-                        template_queries_to_check = template_query if isinstance(template_query, list) else [template_query]
-                        validation_to_check = validation_query if has_validation else ''
-                        has_id_agg = (
-                            self._has_id_aggregate(pre_query) or
-                            self._has_id_aggregate(post_query) or
-                            self._has_id_aggregate(validation_to_check) or
-                            any(self._has_id_aggregate(q) for q in template_queries_to_check)
-                        )
-                    else:
-                        # 单个查询格式
-                        validation_to_check = validation_query if has_validation else ''
-                        has_id_agg = (
-                            self._has_id_aggregate(pre_query) or
-                            self._has_id_aggregate(template_query) or
-                            self._has_id_aggregate(post_query) or
-                            self._has_id_aggregate(validation_to_check)
-                        )
-                    
-                    if has_id_agg:
-                        stats['failure_count'] += 1
-                        logger.debug(f"查询包含针对 ID 属性的聚合，跳过该样本: {template_id}")
-                        continue
-                    
-                    # 校验：关系终点标签与 schema 一致、节点属性属于对应 label
-                    valid, validation_err = self._validate_management_queries(template_query)
-                    if not valid:
-                        stats['failure_count'] += 1
-                        logger.debug(f"管理查询校验未通过，跳过该样本: {template_id} — {validation_err}")
-                        continue
-                    
-                    # 执行查询流程
-                    if is_batch:
-                        # Batch 格式执行流程（新格式）：
-                        # 1. 运行初始 validation 查询（如果存在）
-                        # 2. 对每个 template 查询：
-                        #    - 执行 template 查询
-                        #    - 执行 validation 查询
-                        # 3. 恢复数据库
-                        
-                        # 初始化验证查询结果列表
-                        validation_queries_list: List[str] = []
-                        validation_answers_list: List[List[Dict]] = []
-                        validation_successes_list: List[bool] = []
-                        validation_errors_list: List[Optional[str]] = []
-                        
-                        # 1. 执行初始 validation 查询（如果存在）
-                        if has_validation:
-                            v_success, v_answer, v_error = self.executor.execute(validation_query, allow_empty=True)
-                            validation_queries_list.append(validation_query)
-                            validation_answers_list.append(v_answer)
-                            validation_successes_list.append(v_success)
-                            validation_errors_list.append(v_error)
-                            if not v_success:
-                                stats['failure_count'] += 1
-                                logger.debug(f"初始 validation 查询失败: {template_id}")
-                                continue
-                        
-                        # 兼容旧格式：执行前置验证（如果存在且没有新格式的 validation）
-                        if not has_validation and pre_query and pre_query.strip():
-                            pre_success, pre_answer, pre_error = self.executor.execute(pre_query, allow_empty=True)
+                    active_templates += 1
+                    round_template_success = 0
+
+                    logger.info(
+                        f"第 {round_index} 轮处理模板 "
+                        f"[{template.operation}] difficulty={template.difficulty}: {template.title}"
+                    )
+
+                    while round_template_success < success_per_template:
+                        if len(self.results) >= target_count or attempts >= max_attempts:
+                            break
+
+                        if stats['failure_count'] >= max_failures_per_template:
+                            logger.warning(
+                                f"模板 {template_id} 连续失败 {stats['failure_count']} 次，跳过该模板"
+                            )
+                            break
+
+                        attempts += 1
+                        stats['usage_count'] += 1
+
+                        build_result = self.builder.build_queries(template)
+                        if len(build_result) == 5:
+                            pre_query, template_query, post_query, validation_query, params_used = build_result
                         else:
-                            pre_success, pre_answer, pre_error = True, [], None
-                        
-                        # 2. 执行 template 列表中的每个操作，并在每个操作后执行 validation
-                        template_queries_list = template_query if isinstance(template_query, list) else [template_query]
-                        template_successes: List[bool] = []
-                        template_errors: List[Optional[str]] = []
-                        template_executed_queries: List[str] = []
-                        template_answers: List[List[Dict]] = []
-                        
-                        for idx, template_q in enumerate(template_queries_list, start=1):
-                            # 执行 template 查询
-                            t_success, t_answer, t_error = self.executor.execute(template_q, allow_empty=True)
-                            template_successes.append(t_success)
-                            template_errors.append(t_error)
-                            template_executed_queries.append(template_q)
-                            template_answers.append(t_answer)
-                            
-                            # 如果 template 查询失败，跳过后续 validation
-                            if not t_success:
-                                continue
-                            
-                            # 执行 validation 查询（如果存在）
+                            pre_query, template_query, post_query, params_used = build_result
+                            validation_query = None
+
+                        if not template_query:
+                            stats['failure_count'] += 1
+                            logger.debug(f"构建查询失败: {template_id}")
+                            continue
+
+                        has_validation = template.has_validation() and validation_query
+                        is_batch = template.is_batch()
+
+                        if is_batch:
+                            template_queries_to_check = template_query if isinstance(template_query, list) else [template_query]
+                            validation_to_check = validation_query if has_validation else ''
+                            has_id_agg = (
+                                self._has_id_aggregate(pre_query) or
+                                self._has_id_aggregate(post_query) or
+                                self._has_id_aggregate(validation_to_check) or
+                                any(self._has_id_aggregate(q) for q in template_queries_to_check)
+                            )
+                        else:
+                            validation_to_check = validation_query if has_validation else ''
+                            has_id_agg = (
+                                self._has_id_aggregate(pre_query) or
+                                self._has_id_aggregate(template_query) or
+                                self._has_id_aggregate(post_query) or
+                                self._has_id_aggregate(validation_to_check)
+                            )
+
+                        if has_id_agg:
+                            stats['failure_count'] += 1
+                            logger.debug(f"查询包含针对 ID 属性的聚合，跳过该样本: {template_id}")
+                            continue
+
+                        valid, validation_err = self._validate_management_queries(template_query)
+                        if not valid:
+                            stats['failure_count'] += 1
+                            logger.debug(f"管理查询校验未通过，跳过该样本: {template_id} — {validation_err}")
+                            continue
+
+                        execution = self._execute_sample_with_rollback(
+                            template=template,
+                            template_query=template_query,
+                            pre_query=pre_query,
+                            post_query=post_query,
+                            validation_query=validation_query,
+                            params_used=params_used,
+                            has_validation=has_validation,
+                            is_batch=is_batch,
+                        )
+                        pre_success = execution["pre_success"]
+                        pre_answer = execution["pre_answer"]
+                        pre_error = execution["pre_error"]
+                        post_success = execution["post_success"]
+                        post_answer = execution["post_answer"]
+                        post_error = execution["post_error"]
+                        template_success = execution["template_success"]
+                        template_successes = execution["template_successes"]
+                        template_error = execution["template_error"]
+                        template_executed_queries = execution["template_executed_queries"]
+                        template_answers = execution["template_answers"]
+                        validation_queries_list = execution["validation_queries_list"]
+                        validation_answers_list = execution["validation_answers_list"]
+                        validation_successes_list = execution["validation_successes_list"]
+                        validation_errors_list = execution["validation_errors_list"]
+                        overall_success = execution["overall_success"]
+
+                        if overall_success:
+                            result = ManagementQueryResult(
+                                operation=template.operation,
+                                difficulty=template.difficulty,
+                                title=template.title,
+                                template_id=template_id,
+                                pre_validation_query=pre_query or '',
+                                pre_validation_params=params_used,
+                                pre_validation_answer=pre_answer,
+                                pre_validation_success=pre_success,
+                                pre_validation_error=pre_error,
+                                template_query=template_query,
+                                template_params=params_used,
+                                template_success=template_success if not is_batch else template_successes,
+                                template_queries_executed=template_executed_queries,
+                                template_answers=template_answers,
+                                template_error=template_error,
+                                post_validation_query=post_query or '',
+                                post_validation_params=params_used,
+                                post_validation_answer=post_answer,
+                                post_validation_success=post_success,
+                                post_validation_error=post_error,
+                                validation_queries=validation_queries_list if has_validation else None,
+                                validation_answers=validation_answers_list if has_validation else None,
+                                validation_successes=validation_successes_list if has_validation else None,
+                                validation_errors=validation_errors_list if has_validation else None,
+                                overall_success=overall_success
+                            )
+
+                            self.results.append(result)
+                            stats['success_count'] += 1
+                            stats['failure_count'] = 0
+                            round_template_success += 1
+                            round_progress = True
+
+                            if stream_file:
+                                record = self._build_export_record(result)
+                                if not first_stream_record:
+                                    stream_file.write(',\n')
+                                formatted_json = json.dumps(record, ensure_ascii=False, indent=2, default=str)
+                                indented_lines = []
+                                for line in formatted_json.split('\n'):
+                                    indented_lines.append('  ' + line)
+                                stream_file.write('\n'.join(indented_lines))
+                                stream_file.flush()
+                                first_stream_record = False
+
+                            logger.info(
+                                f"成功生成查询 [{len(self.results)}/{target_count}]: "
+                                f"[{template.operation}] difficulty={template.difficulty} "
+                                f"(本轮模板成功: {round_template_success}/{success_per_template}, "
+                                f"累计成功: {stats['success_count']})"
+                            )
+                        else:
+                            stats['failure_count'] += 1
+                            failure_reasons = []
                             if has_validation:
-                                # agg 模式：始终使用同一条 validation_query
-                                # no-agg 模式：为每条 template 生成一条按索引展开的 validation
-                                if self.validation_mode == "no-agg" and template.has_validation():
-                                    v_template = template.validation or ""
-                                    v_template_idx = self._adapt_validation_for_index(v_template, idx)
-                                    v_query = self.builder._replace_parameters(v_template_idx, params_used)
-                                else:
-                                    v_query = validation_query
-                                v_success, v_answer, v_error = self.executor.execute(v_query, allow_empty=True)
-                                validation_queries_list.append(v_query)
-                                validation_answers_list.append(v_answer)
-                                validation_successes_list.append(v_success)
-                                validation_errors_list.append(v_error)
-                        
-                        # 所有 template 查询都成功才算成功
-                        template_success = all(template_successes)
-                        template_error = template_errors if not template_success else None
-                        
-                        # 兼容旧格式：执行后置验证（如果存在且没有新格式的 validation）
-                        if not has_validation and post_query and post_query.strip():
-                            post_success, post_answer, post_error = self.executor.execute(post_query, allow_empty=True)
-                        else:
-                            post_success, post_answer, post_error = True, [], None
-                        
-                        # 判断整体是否成功
-                        if has_validation:
-                            # 新格式：所有 template 和 validation 都成功
-                            all_validations_success = all(validation_successes_list) if validation_successes_list else True
-                            overall_success = template_success and all_validations_success
-                        else:
-                            # 旧格式：pre_validation, template, post_validation 都成功
-                            overall_success = pre_success and template_success and post_success
-                        
-                        # 恢复数据库（无论成功失败都要恢复，确保下一个 batch 在干净数据库上运行）
-                        if overall_success or self.use_database_restore:
-                            self.restore_database()
-                    else:
-                        # 单个查询格式（新格式）：
-                        # 1. 运行初始 validation 查询（如果存在）
-                        # 2. 执行 template 查询
-                        # 3. 执行 validation 查询（如果存在）
-                        
-                        # 初始化验证查询结果列表
-                        validation_queries_list: List[str] = []
-                        validation_answers_list: List[List[Dict]] = []
-                        validation_successes_list: List[bool] = []
-                        validation_errors_list: List[Optional[str]] = []
-                        
-                        # 1. 执行初始 validation 查询（如果存在）
-                        if has_validation:
-                            v_success, v_answer, v_error = self.executor.execute(validation_query, allow_empty=True)
-                            validation_queries_list.append(validation_query)
-                            validation_answers_list.append(v_answer)
-                            validation_successes_list.append(v_success)
-                            validation_errors_list.append(v_error)
-                            if not v_success:
-                                stats['failure_count'] += 1
-                                logger.debug(f"初始 validation 查询失败: {template_id}")
-                                continue
-                        
-                        # 兼容旧格式：执行前置验证（如果存在且没有新格式的 validation）
-                        if not has_validation and pre_query and pre_query.strip():
-                            pre_success, pre_answer, pre_error = self.executor.execute(pre_query, allow_empty=True)
-                        else:
-                            pre_success, pre_answer, pre_error = True, [], None
-                        
-                        # 2. 执行操作（CREATE/DELETE/SET/MERGE等），记录执行结果
-                        t_success, t_answer, t_error = self.executor.execute(template_query, allow_empty=True)
-                        template_success = t_success
-                        template_error = t_error
-                        template_executed_queries = [template_query]  # 单个查询也记录为列表格式
-                        template_answers = [t_answer]
-                        
-                        # 3. 执行 validation 查询（如果存在）
-                        if has_validation and t_success:
-                            v_success, v_answer, v_error = self.executor.execute(validation_query, allow_empty=True)
-                            validation_queries_list.append(validation_query)
-                            validation_answers_list.append(v_answer)
-                            validation_successes_list.append(v_success)
-                            validation_errors_list.append(v_error)
-                        
-                        # 兼容旧格式：执行后置验证（如果存在且没有新格式的 validation）
-                        if not has_validation and post_query and post_query.strip():
-                            post_success, post_answer, post_error = self.executor.execute(post_query, allow_empty=True)
-                        else:
-                            post_success, post_answer, post_error = True, [], None
-                        
-                        # 判断整体是否成功
-                        if has_validation:
-                            # 新格式：template 和所有 validation 都成功
-                            all_validations_success = all(validation_successes_list) if validation_successes_list else True
-                            overall_success = template_success and all_validations_success
-                        else:
-                            # 旧格式：pre_validation, template, post_validation 都成功
-                            overall_success = pre_success and template_success and post_success
-                    
-                    if overall_success:
-                        # 创建结果对象
-                        result = ManagementQueryResult(
-                            operation=template.operation,
-                            difficulty=template.difficulty,
-                            title=template.title,
-                            template_id=template_id,
-                            pre_validation_query=pre_query or '',
-                            pre_validation_params=params_used,
-                            pre_validation_answer=pre_answer,
-                            pre_validation_success=pre_success,
-                            pre_validation_error=pre_error,
-                            template_query=template_query,  # batch 格式时为列表，单个格式时为字符串
-                            template_params=params_used,
-                            template_success=template_success if not is_batch else template_successes,  # batch 格式时为列表
-                            template_queries_executed=template_executed_queries,  # 记录所有执行的查询
-                            template_answers=template_answers,
-                            template_error=template_error,  # batch 格式时为列表
-                            post_validation_query=post_query or '',
-                            post_validation_params=params_used,
-                            post_validation_answer=post_answer,
-                            post_validation_success=post_success,
-                            post_validation_error=post_error,
-                            validation_queries=validation_queries_list if has_validation else None,
-                            validation_answers=validation_answers_list if has_validation else None,
-                            validation_successes=validation_successes_list if has_validation else None,
-                            validation_errors=validation_errors_list if has_validation else None,
-                            overall_success=overall_success
-                        )
-                        
-                        self.results.append(result)
-                        stats['success_count'] += 1
-                        stats['failure_count'] = 0
+                                if validation_successes_list and not all(validation_successes_list):
+                                    failed_validations = [i for i, s in enumerate(validation_successes_list) if not s]
+                                    failure_reasons.append(f"validation失败: 索引 {failed_validations}")
+                            else:
+                                if not pre_success:
+                                    failure_reasons.append(f"pre_validation失败: {pre_error}")
+                                if not post_success:
+                                    failure_reasons.append(f"post_validation失败: {post_error}")
+                            if not template_success:
+                                failure_reasons.append(f"template失败: {template_error}")
 
-                        # 流式写入当前成功结果
-                        if stream_file:
-                            record = self._build_export_record(result)
-                            if not first_stream_record:
-                                stream_file.write(',\n')
-                            # 格式化 JSON 记录，添加缩进
-                            formatted_json = json.dumps(record, ensure_ascii=False, indent=2, default=str)
-                            # 为每条记录添加缩进（因为它在数组中）
-                            indented_lines = []
-                            for line in formatted_json.split('\n'):
-                                indented_lines.append('  ' + line)  # 添加2个空格缩进
-                            stream_file.write('\n'.join(indented_lines))
-                            stream_file.flush()
-                            first_stream_record = False
-                        
+                            logger.warning(f"查询执行失败 [{template_id}]: {', '.join(failure_reasons)}")
+
+                    if round_template_success > 0:
                         logger.info(
-                            f"成功生成查询 [{len(self.results)}/{target_count}]: "
-                            f"[{template.operation}] difficulty={template.difficulty} "
-                            f"(模板成功: {stats['success_count']}/{success_per_template})"
+                            f"模板 {template_id} 第 {round_index} 轮完成，"
+                            f"本轮成功生成 {round_template_success} 个查询，累计 {stats['success_count']} 个"
                         )
-                    else:
-                        stats['failure_count'] += 1
-                        # 输出详细的失败信息，帮助调试
-                        failure_reasons = []
-                        if has_validation:
-                            # 新格式：检查 validation 失败
-                            if validation_successes_list and not all(validation_successes_list):
-                                failed_validations = [i for i, s in enumerate(validation_successes_list) if not s]
-                                failure_reasons.append(f"validation失败: 索引 {failed_validations}")
-                        else:
-                            # 旧格式：检查 pre/post validation
-                            if not pre_success:
-                                failure_reasons.append(f"pre_validation失败: {pre_error}")
-                            if not post_success:
-                                failure_reasons.append(f"post_validation失败: {post_error}")
-                        if not template_success:
-                            failure_reasons.append(f"template失败: {template_error}")
-                        
-                        logger.warning(f"查询执行失败 [{template_id}]: {', '.join(failure_reasons)}")
-                
-                # 完成当前模板
-                if stats['success_count'] >= success_per_template:
-                    logger.info(f"模板 {template_id} 已完成，成功生成 {stats['success_count']} 个查询")
-                elif stats['failure_count'] >= max_failures_per_template:
-                    logger.warning(f"模板 {template_id} 因连续失败过多而跳过，成功生成 {stats['success_count']} 个查询")
+                    elif stats['failure_count'] >= max_failures_per_template:
+                        logger.warning(
+                            f"模板 {template_id} 因连续失败过多而失活，累计成功生成 {stats['success_count']} 个查询"
+                        )
+
+                if active_templates == 0:
+                    logger.warning("所有模板都已失活，提前停止生成")
+                    break
+
+                if not round_progress:
+                    logger.warning("本轮没有生成任何成功查询，提前停止以避免空转")
+                    break
         finally:
             if stream_file:
                 stream_file.write('\n]\n')
@@ -1089,11 +1246,15 @@ class ManageGenerator:
         self, template_query: Union[str, List[str]]
     ) -> Tuple[bool, Optional[str]]:
         """
-        校验生成的管理查询是否合法，避免：
-        1. 关系终点标签与 schema 不一致（如 Company_Guarantee_Company 的终点应为 Company，而非 Account）
-        2. 节点上使用的属性不属于该 label（如 Account { companyId: ... } 中 companyId 不属于 Account）
-        Returns:
-            (valid, error_message)
+        校验生成的管理查询是否合法，严格对齐 schema 的三元组约束：
+
+        1) 节点属性必须属于其 label（如 Account { companyId } 非法）
+        2) 任意关系模式 (a)-[:REL]->(b) / (a)<-[:REL]-(b) / (a)-[:REL]-(b) 的
+           (start_label, rel_type, end_label) 必须存在于 schema.triplets 中：
+           - 标签可来自模式内 (var:Label) 注解，或查询其他位置对同一变量的标签绑定
+             (如 MATCH (n:Account) ... WHERE NOT (n)-[:Person_Invest_Company]->(:Account))
+           - 对于无向关系 `-[:REL]-`，(start,rel,end) 或其反向 (end,rel,start) 之一
+             在 triplets 中即视为合法
         """
         import re
         if not self.schema:
@@ -1103,68 +1264,149 @@ class ManageGenerator:
         )
         triplets = getattr(self.schema, "triplets", set()) or set()
         labels = getattr(self.schema, "labels", {}) or {}
+
+        # Cypher 标识符：字母/数字/下划线，首字符非数字（近似）
+        var_re = r'[A-Za-z_][A-Za-z0-9_]*'
+        # 节点模式：( [var] [:Label [:Label2 ...]]? [ {props} ]? )
+        #   - 捕获 var (可为空)、第一个 label（可为空）、属性 block（可为空）
+        node_re = re.compile(
+            r'\(\s*(' + var_re + r')?\s*'           # 1: var (可为空)
+            r'(?::\s*(' + var_re + r')(?:\s*:\s*' + var_re + r')*)?'  # 2: first label
+            r'\s*(\{[^{}]*\})?'                      # 3: props block
+            r'\s*\)'
+        )
+        # 关系模式：-[ [var] [:REL] [ {props} ]? [*range]? ]- 或 ->, <-
+        # 捕获方向前后箭头及 rel_type
+        rel_re = re.compile(
+            r'(<-|-)\s*'                             # 1: left arrow: -, <-
+            r'\[\s*(?:' + var_re + r')?\s*'          # [var]?
+            r'(?::\s*(' + var_re + r'))?'            # 2: rel_type
+            r'[^\[\]]*'                              # props, *range, predicate
+            r'\]\s*(->|-)'                           # 3: right arrow: ->, -
+        )
+
+        def _collect_var_to_label(query: str) -> Dict[str, str]:
+            """扫描整段查询，收集 (var:Label) 到标签的绑定（取首次出现）。"""
+            v2l: Dict[str, str] = {}
+            # 带显式 Label 的节点模式
+            labeled_node_re = re.compile(
+                r'\(\s*(' + var_re + r')\s*:\s*(' + var_re + r')\b'
+            )
+            for m in labeled_node_re.finditer(query):
+                var, lb = m.group(1), m.group(2)
+                if var and var not in v2l:
+                    v2l[var] = lb
+            return v2l
+
+        def _iter_rel_patterns(query: str):
+            """
+            在整段查询中遍历形如 node-rel-node 的完整模式，返回
+            (left_var, left_label, rel_type, right_var, right_label, direction)。
+            direction: '->'（左->右）, '<-'（右->左）, '-'（无向）
+            """
+            i = 0
+            n = len(query)
+            while i < n:
+                # 尝试在 i 处匹配节点
+                nm = node_re.match(query, i)
+                if not nm:
+                    i += 1
+                    continue
+                left_var = nm.group(1) or ""
+                left_label = nm.group(2) or ""
+                j = nm.end()
+                # 在节点之后尝试匹配关系
+                rm = rel_re.match(query, j)
+                if not rm:
+                    # 无关系紧随，跳到下一处
+                    i = j
+                    continue
+                left_arrow = rm.group(1)    # '<-' or '-'
+                right_arrow = rm.group(3)   # '->' or '-'
+                rel_type = rm.group(2) or ""
+                k = rm.end()
+                # 关系之后必须紧跟节点
+                nm2 = node_re.match(query, k)
+                if not nm2:
+                    i = j
+                    continue
+                right_var = nm2.group(1) or ""
+                right_label = nm2.group(2) or ""
+
+                # 判定方向
+                if left_arrow == "-" and right_arrow == "->":
+                    direction = "->"
+                elif left_arrow == "<-" and right_arrow == "-":
+                    direction = "<-"
+                elif left_arrow == "-" and right_arrow == "-":
+                    direction = "-"
+                else:
+                    direction = "->"  # 其他情况按左->右
+
+                yield (left_var, left_label, rel_type, right_var, right_label, direction)
+                # 右节点可能是下一个模式的左节点（链式路径：()-[]->()-[]->()）
+                i = nm2.start()
+                # 避免死循环：若 right node 紧贴 j，至少前进 1
+                if i <= j:
+                    i = j + 1
+
         for q in queries:
             if not q or not q.strip():
                 continue
-            # 1) 关系终点标签：匹配 (start)-[:RelType]->(end:EndLabel {...})
-            # 提取 start_label, rel_type, end_label；校验 (start_label, rel_type, end_label) 在 triplets 中
-            rel_pattern = re.compile(
-                r"\(\s*\w*\s*:\s*(\w+)\s*[^)]*\)\s*-\s*\[\s*:\s*(\w+)\s*[^\]]*\]\s*->\s*\(\s*\w*\s*:\s*(\w+)\s*(\{[^}]*\})?"
-            )
-            for m in rel_pattern.finditer(q):
-                start_label, rel_type, end_label, end_props = (
-                    m.group(1),
-                    m.group(2),
-                    m.group(3),
-                    m.group(4) or "",
-                )
-                if triplets and (start_label, rel_type, end_label) not in triplets:
-                    return False, (
-                        f"关系终点标签与 schema 不一致: "
-                        f"({start_label})-[:{rel_type}]->(?:{end_label}) 不在合法三元组中"
-                    )
-                # 终点节点上的属性必须属于 end_label
-                if end_props and end_label in labels:
-                    prop_keys = re.findall(r"[\{,]\s*(\w+)\s*:", end_props)
-                    valid_props = set(labels[end_label].properties.keys())
-                    for k in prop_keys:
-                        if k not in valid_props:
-                            return False, (
-                                f"属性 {k} 不属于 label {end_label}: "
-                                f"节点 (:{end_label} {{{k}: ...}})"
-                            )
-            # 2) 任意节点 (var:Label { ... })：校验每个属性属于对应 Label
-            node_pattern = re.compile(r":(\w+)\s*\{([^}]*)\}")
-            for m in node_pattern.finditer(q):
-                label_name, props_content = m.group(1), m.group(2)
+
+            # 1) 任意节点 (var:Label { ... })：校验属性属于对应 Label
+            for m in re.finditer(r':(' + var_re + r')\s*(\{[^{}]*\})', q):
+                label_name = m.group(1)
+                props_content = m.group(2)
                 if label_name not in labels:
                     continue
                 valid_props = set(labels[label_name].properties.keys())
-                prop_keys = re.findall(r"[\{,]\s*(\w+)\s*:", props_content)
+                prop_keys = re.findall(r'[\{,]\s*(' + var_re + r')\s*:', props_content)
                 for k in prop_keys:
                     if k not in valid_props:
                         return False, (
                             f"属性 {k} 不属于 label {label_name}: "
                             f"(:{label_name} {{{k}: ...}})"
                         )
-            # 3) MATCH (a:L1),(b:L2) ... CREATE (a)-[:R]->(b)：用 MATCH 中的标签校验 (L1,R,L2) 是否在 triplets 中
-            var_to_label = {}
-            for m in re.finditer(r"\(\s*(\w+)\s*:\s*(\w+)\s*[^)]*\)", q):
-                var_to_label[m.group(1)] = m.group(2)
-            create_rel = re.search(
-                r"CREATE\s+\(\s*(\w+)\s*\)\s*-\s*\[\s*:\s*(\w+)\s*[^\]]*\]\s*->\s*\(\s*(\w+)\s*\)",
-                q,
-                re.IGNORECASE,
-            )
-            if create_rel and triplets:
-                left_var, rel_type, right_var = create_rel.group(1), create_rel.group(2), create_rel.group(3)
-                start_label = var_to_label.get(left_var)
-                end_label = var_to_label.get(right_var)
-                if start_label and end_label and (start_label, rel_type, end_label) not in triplets:
-                    return False, (
-                        f"关系类型与节点对不匹配: MATCH (:{start_label}),(:{end_label}) 之间不存在关系 "
-                        f"[:{rel_type}]，合法三元组中无 ({start_label}, {rel_type}, {end_label})"
-                    )
+
+            # 2) 收集变量到标签的绑定（跨 MATCH/WHERE/CREATE 等）
+            var_to_label = _collect_var_to_label(q)
+
+            # 3) 遍历所有关系模式，校验 (start, rel, end) 三元组
+            if not triplets:
+                continue
+            for (lv, ll, rt, rv, rl, direction) in _iter_rel_patterns(q):
+                if not rt:
+                    continue  # 无显式关系类型（如匿名关系/可变长），暂不校验
+
+                # 解析左右两端的标签：模式内标签 > 变量绑定
+                left_lb = ll or (var_to_label.get(lv) if lv else "")
+                right_lb = rl or (var_to_label.get(rv) if rv else "")
+
+                if not left_lb or not right_lb:
+                    continue  # 两端标签未知，跳过
+
+                if direction == "->":
+                    s_lb, e_lb = left_lb, right_lb
+                    if (s_lb, rt, e_lb) not in triplets:
+                        return False, (
+                            f"关系类型与节点对不匹配: "
+                            f"(:{s_lb})-[:{rt}]->(:{e_lb}) 不在合法三元组中"
+                        )
+                elif direction == "<-":
+                    s_lb, e_lb = right_lb, left_lb
+                    if (s_lb, rt, e_lb) not in triplets:
+                        return False, (
+                            f"关系类型与节点对不匹配: "
+                            f"(:{left_lb})<-[:{rt}]-(:{right_lb}) 不在合法三元组中"
+                        )
+                else:  # '-' 无向
+                    if (left_lb, rt, right_lb) not in triplets and (right_lb, rt, left_lb) not in triplets:
+                        return False, (
+                            f"关系类型与节点对不匹配: "
+                            f"(:{left_lb})-[:{rt}]-(:{right_lb}) 在任一方向均不在合法三元组中"
+                        )
+
         return True, None
 
     def _has_id_aggregate(self, query: str) -> bool:

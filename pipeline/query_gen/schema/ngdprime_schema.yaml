@@ -1,0 +1,48 @@
+# PrimeKG Knowledge Graph Schema
+# Source: Nature Scientific Data (2023), Harvard Dataverse DVN/IXA7BM
+# Note: node type names with '/' are stored as '_' in Neo4j labels
+#   (e.g. "gene/protein" → gene_protein, "effect/phenotype" → effect_phenotype).
+
+dataset: primekg
+
+nodes:
+  - gene_protein
+  - drug
+  - disease
+  - effect_phenotype
+  - biological_process
+  - molecular_function
+  - cellular_component
+  - pathway
+  - anatomy
+  - exposure
+
+triplets:
+  - {src: gene_protein,       rel: protein_protein,           dst: gene_protein}
+  - {src: drug,               rel: drug_protein,              dst: gene_protein}
+  - {src: drug,               rel: drug_disease,              dst: disease}
+  - {src: drug,               rel: drug_drug,                 dst: drug}
+  - {src: drug,               rel: drug_effect,               dst: effect_phenotype}
+  - {src: gene_protein,       rel: disease_protein,           dst: disease}
+  - {src: disease,            rel: disease_disease,           dst: disease}
+  - {src: disease,            rel: disease_phenotype_positive, dst: effect_phenotype}
+  - {src: disease,            rel: disease_phenotype_negative, dst: effect_phenotype}
+  - {src: gene_protein,       rel: phenotype_protein,         dst: effect_phenotype}
+  - {src: effect_phenotype,   rel: phenotype_phenotype,       dst: effect_phenotype}
+  - {src: biological_process, rel: bioprocess_bioprocess,     dst: biological_process}
+  - {src: molecular_function, rel: molfunc_molfunc,           dst: molecular_function}
+  - {src: cellular_component, rel: cellcomp_cellcomp,         dst: cellular_component}
+  - {src: gene_protein,       rel: bioprocess_protein,        dst: biological_process}
+  - {src: gene_protein,       rel: molfunc_protein,           dst: molecular_function}
+  - {src: gene_protein,       rel: cellcomp_protein,          dst: cellular_component}
+  - {src: pathway,            rel: pathway_pathway,           dst: pathway}
+  - {src: gene_protein,       rel: pathway_protein,           dst: pathway}
+  - {src: anatomy,            rel: anatomy_anatomy,           dst: anatomy}
+  - {src: gene_protein,       rel: anatomy_protein_present,   dst: anatomy}
+  - {src: gene_protein,       rel: anatomy_protein_absent,    dst: anatomy}
+  - {src: exposure,           rel: exposure_protein,          dst: gene_protein}
+  - {src: exposure,           rel: exposure_disease,          dst: disease}
+  - {src: exposure,           rel: exposure_exposure,         dst: exposure}
+  - {src: exposure,           rel: exposure_bioprocess,       dst: biological_process}
+  - {src: exposure,           rel: exposure_molfunc,          dst: molecular_function}
+  - {src: exposure,           rel: exposure_cellcomp,         dst: cellular_component}

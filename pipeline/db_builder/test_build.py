@@ -11,10 +11,13 @@ docker run -d \
 
 from pathlib import Path
 
-from build_base import Neo4jGraphBuilder
+try:
+    from .build_base import Neo4jGraphBuilder
+except ImportError:  # pragma: no cover - direct script execution
+    from build_base import Neo4jGraphBuilder
 
 
-NEO4J_URI = "bolt://localhost:7691"
+NEO4J_URI = "bolt://localhost:7692"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "fei123456"
 
@@ -26,9 +29,9 @@ GRAPH_PATH = (
     / "data_gen"
     / "graph_gen"
     / "graph_buffer"
-    / "ldbc_snb_bi.gpickle"
+    / "ldbc_snb_finbench.gpickle"
 )
-DATASET_NAME = "ldbc_bi"
+DATASET_NAME = "ldbcfin"
 
 
 def main() -> None:

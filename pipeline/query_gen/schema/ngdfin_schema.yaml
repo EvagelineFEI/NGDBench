@@ -1,0 +1,28 @@
+# LDBC FinBench Transaction Workload Schema
+# Neo4j relationship type naming convention: {SrcLabel}_{VerbCamelCase}_{DstLabel}
+# Polymorphic edges (e.g. Person/Company both own Account) appear as separate rel types.
+
+dataset: ldbc_fin
+
+nodes:
+  - Person
+  - Company
+  - Account
+  - Loan
+  - Medium
+
+triplets:
+  - {src: Person,  rel: Person_Own_Account,       dst: Account}
+  - {src: Company, rel: Company_Own_Account,      dst: Account}
+  - {src: Account, rel: Account_Transfer_Account, dst: Account}
+  - {src: Account, rel: Account_Withdraw_Account, dst: Account}
+  - {src: Person,  rel: Person_Apply_Loan,        dst: Loan}
+  - {src: Company, rel: Company_Apply_Loan,       dst: Loan}
+  - {src: Loan,    rel: Loan_Deposit_Account,     dst: Account}
+  - {src: Account, rel: Account_Repay_Loan,       dst: Loan}
+  - {src: Medium,  rel: Medium_SignIn_Account,    dst: Account}
+  - {src: Person,  rel: Person_Invest_Company,    dst: Company}
+  - {src: Company, rel: Company_Invest_Company,   dst: Company}
+  - {src: Person,  rel: Person_Guarantee_Person,  dst: Person}
+  - {src: Company, rel: Company_Guarantee_Company, dst: Company}
+  - {src: Person,  rel: Person_WorkIn_Company,    dst: Company}

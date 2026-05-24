@@ -1,134 +1,229 @@
 # NGDB Benchmark
 
-Our dataset is available at [https://huggingface.co/datasets/FeifeiCS/NGDBench](https://huggingface.co/datasets/FeifeiCS/NGDBench)
+NGDB Benchmark is used to generate graph data, create perturbed graphs, load graphs into Neo4j, generate Cypher queries, and assemble the final natural-language QA datasets.
 
-## Table of Contents
 
-- [User Guide](#user-guide)
-- [Using Neo4j](#using-neo4j)
-- [Status of Data Generation Modules](#status-of-data-generation-modules)
-- [Usage Guide](#usage-guide)
-- [Generated Datasets](#generated-datasets)
+## Repository Layout
 
-## User Guide
+- `data_gen/`: source data processing, graph construction, graph perturbation, and perturbation records.
+- `pipeline/db_builder/`: imports `.gpickle` / `.graphml` graphs into Neo4j.
+- `pipeline/query_gen/`: generates queries from Neo4j schema information and query templates.
+- `pipeline/dataset_constructor/`: the consolidated dataset construction entry point. It executes noisy-graph queries, cleans answers, translates Cypher, and builds `judge`, `management`, and `unstructured` datasets.
+- `pipeline/query_module/` and `pipeline/handler/`: legacy script area. Some entry points are obsolete; prefer `pipeline.dataset_constructor.cli`.
+- `scripts/`: helper scripts for preparing and loading LDBC data.
 
-### 1. Convert Data to Graph Format
+## Environment Setup
 
-Convert the data into graph format (`.gpickle` or `.graphml`):
-
-```bash
-cd data_gen/graph_gen
-python run.py
-```
-
-### 2. Simulate Noisy Graphs
-
-Generate noisy graphs and record the positions of noisy nodes:
+This project uses `uv` for Python environment management:
 
 ```bash
-cd data_gen
-python graph_generator.py
+cd /home/ylivm/ngdb/ngdb_benchmark
+uv sync
 ```
 
-### 3. Build Database Containers
+Query generation and dataset construction require an accessible Neo4j 5.x instance. The examples commonly use user `neo4j`; set the password and Bolt port according to your local container or server.
 
-If you need to build your own database containers (you can also directly use the prebuilt ones):
+## End-to-End Workflow
+
+### 1. Prepare Graph Data
+
+Query generation and database loading primarily consume NetworkX graph files. The recommended format is `.gpickle`. The conventional output directory is:
+
+```text
+data_gen/graph_gen/graph_buffer/
+```
+
+Data conversion utilities are concentrated in `data_gen/graph_gen/dataload_toolkit.py`. Each dataset has its own raw file layout, so check the input path and file format before running conversion code. For example, LDBC SNB BI helper scripts are located at:
 
 ```bash
-cd pipeline/db_builder
-python test_build.py
+scripts/ldbc_snb_bi/ldbc_snb_bi_prepare.sh
+scripts/ldbc_snb_bi/load_from_existing_data.sh
 ```
 
-### 4. Generate Detection Queries
+If you already have a graph file, you can skip directly to the next step.
 
-#### 4.1
+### 2. Generate Perturbed Graphs
 
-On the noisy graph, generate detection queries (complex queries on noisy and clean nodes); on the clean graph, generate queries related to insert, delete, and update operations.
+`data_gen/graph_generator.py` reads a clean graph, injects noise or incompleteness, and saves both the perturbed graph and perturbation records.
 
-The queries are divided into several categories:
+```bash
+uv run python data_gen/graph_generator.py \
+  --input data_gen/graph_gen/graph_buffer/ldbc_snb_finbench.gpickle \
+  --output-dir data_gen/graph_gen/graph_buffer \
+  --records-dir data_gen/perturbation_generator/perturb_record \
+  --guide data_gen/perturbation_generator/perturb_guide/general_guid_new.json \
+  --dataset-name ldbc_snb_finbench
+```
 
-- **complex1**: Complex query type 1, 1/16 (three template categories: queries without aggregation, queries with aggregation, and chain queries returning a, b, d)
-- **complex2**: Complex query type 2 (judgment questions), about 1w–200 queries
-- **management**: Management queries (insert/delete/update), about 1w–2k queries (see the next section)
+Common options:
+
+- `--input`: input `.gpickle` graph.
+- `--output-dir`: output directory for perturbed graph files.
+- `--records-dir`: output directory for perturbation records.
+- `--guide`: perturbation rule JSON file.
+- `--dataset-name`: output filename prefix; defaults to the input filename stem.
+
+Example perturbation guides:
+
+- `data_gen/perturbation_generator/perturb_guide/general_guid_new.json`
+- `data_gen/perturbation_generator/perturb_guide/paramkg_test.json`
+- `data_gen/perturbation_generator/semantic_perturb_guide/paramkg2.json`
+
+### 3. Load Graphs Into Neo4j
+
+Start Neo4j first, then confirm the Bolt port, username, and password. The graph importer is `Neo4jGraphBuilder` in `pipeline/db_builder/build_base.py`. The example script is:
+
+```bash
+uv run python pipeline/db_builder/test_build.py
+```
+
+The script contains hard-coded sample graph paths and Neo4j connection settings. Update these values before production use:
+
+- `NEO4J_URI`
+- `NEO4J_USER`
+- `NEO4J_PASSWORD`
+- `GRAPH_PATH`
+- `DATASET_NAME`
+
+The importer writes into the default `neo4j` database and creates a shared base label `NGDBNode` plus a unique `_node_id` constraint.
+
+### 4. Generate Queries
+
+The structured query generation entry point is `pipeline/query_gen/qgen_test.py`. It connects to Neo4j, analyzes the schema, samples template parameters, executes queries, and writes results to JSON incrementally.
 
 ```bash
 cd pipeline/query_gen
-python qgen_test_noise
+uv run python qgen_test.py \
+  --uri bolt://localhost:7689 \
+  --user neo4j \
+  --password YOUR_PASSWORD \
+  --dataset primekg \
+  --template-path query_template/template_agg.json
 ```
 
-In the `query_module`, execute queries on the noisy graph (required for `complex1` and `complex2`), and then add the execution results on the noisy graph into the files of queries executed on the clean graph.
+Common templates:
 
-#### 4.2
+- `query_template/template.json`: non-aggregation structured queries.
+- `query_template/template_agg.json`: aggregation structured queries.
+- `query_template/template_agg_unstructured.json`: unstructured or evidence-oriented queries.
+- `query_template/template_managemet.json` and `template_managemet_agg.json`: create / update / delete management queries.
+- `query_template/template_mcp1.json`: MCP-related query templates.
 
-(Reserved for additional query generation steps.)
+Schema constraint files are under `pipeline/query_gen/schema/`:
 
-### 5. Clean Query Results
+- `ngdbi_schema.yaml`
+- `ngdfin_schema.yaml`
+- `ngdprime_schema.yaml`
 
-Clean and post-process the query result data.
+`pipeline/query_gen/qgen_test_noise.py` is no longer a functional entry point. Noisy-graph answer execution and final dataset construction are handled by the dataset constructor in the next step.
 
-### 6. Generate NLP Descriptions
+### 5. Build Final Datasets
+
+Unified CLI:
 
 ```bash
-cd pipeline/handler
-python translate.py
+uv run python -m pipeline.dataset_constructor.cli --help
 ```
 
-**Note**: Remember to modify the file name.  
-For extensibility, the templates do not set explicit return limits, so `complex1` queries may all end with `return a`. Finally, you need to add an attribute to the query such as `return a._node_id` (for the LDBC dataset this is `_node_id`; for PrimeKG this can be `x_id`, `x_type`, and `x_name` returned together).
+Structured dataset example:
 
-## Using Neo4j
-
-### Basic Usage
-
-See `pipeline/query_module/db_base.py` for details.
-
-```python
-uri = "bolt://localhost:7693"
-user = "neo4j"
-password = "fei123456"
-
-# Input and output file paths
-input_json_file = "../query_gen/query/ldbc_snb_finbench/noise_query_results_ldbcfin_cleaned.json"
-output_json_file = "noise_execution_step1_ldbcfin_results.json"
-
-# Create database executor
-executor = DatabaseExecutor(uri, user, password)
-
-try:
-    # Connect to the database
-    executor.connect()
-    
-    # Read queries
-    queries = executor.read_queries_from_json(input_json_file)
-    
-    # Execute queries and compare results, enabling incremental saving
-    results = executor.execute_queries_batch(
-        queries, 
-        compare_with_original=True,
-        incremental_save=True,  # enable incremental save
-        output_file_path=output_json_file
-    )
-finally:
-    executor.close()
+```bash
+uv run python -m pipeline.dataset_constructor.cli build \
+  --kind structured \
+  --input pipeline/query_gen/query_results_primekg.json \
+  --output pipeline/query_gen/query/final/primekg/complex_query_agg.json \
+  --neo4j-uri bolt://localhost:7689 \
+  --neo4j-user neo4j \
+  --neo4j-password YOUR_PASSWORD \
+  --api-key YOUR_API_KEY \
+  --base-url YOUR_OPENAI_COMPATIBLE_BASE_URL \
+  --model YOUR_MODEL \
+  --dataset-config pipeline/dataset_constructor/config/dataset_config_econ.json
 ```
 
-### TODO Features
+Translate and normalize existing answers without executing noisy-graph queries:
 
-- 🚧 
-- 🚧 
+```bash
+uv run python -m pipeline.dataset_constructor.cli build \
+  --kind structured \
+  --input INPUT.json \
+  --output OUTPUT.json \
+  --api-key YOUR_API_KEY \
+  --base-url YOUR_OPENAI_COMPATIBLE_BASE_URL \
+  --model YOUR_MODEL \
+  --translate-only
+```
 
-## Status of Data Generation Modules
+Unstructured dataset:
 
-This section is under construction and will be updated with the progress and status of each data generation component.
+```bash
+uv run python -m pipeline.dataset_constructor.cli build \
+  --kind unstructured \
+  --input INPUT.json \
+  --output OUTPUT.json \
+  --neo4j-uri bolt://localhost:7689 \
+  --neo4j-user neo4j \
+  --neo4j-password YOUR_PASSWORD \
+  --api-key YOUR_API_KEY \
+  --base-url YOUR_OPENAI_COMPATIBLE_BASE_URL \
+  --model YOUR_MODEL \
+  --dataset-config pipeline/dataset_constructor/config/dataset_config_mcp.json
+```
 
-## Usage Guide
+Management dataset:
 
-For detailed instructions on how to use the `data_gen` module, please refer to [data_gen/readme.md](data_gen/readme.md).
+```bash
+uv run python -m pipeline.dataset_constructor.cli build \
+  --kind management \
+  --input INPUT.json \
+  --output OUTPUT.json \
+  --api-key YOUR_API_KEY \
+  --base-url YOUR_OPENAI_COMPATIBLE_BASE_URL \
+  --model YOUR_MODEL
+```
 
-## Generated Datasets
+Answer-judging dataset:
 
-The currently generated datasets are stored at:
+```bash
+uv run python -m pipeline.dataset_constructor.cli answer-judge \
+  --input INPUT.json \
+  --output OUTPUT.json \
+  --api-key YOUR_API_KEY \
+  --base-url YOUR_OPENAI_COMPATIBLE_BASE_URL \
+  --model YOUR_MODEL \
+  --dataset-config pipeline/dataset_constructor/config/dataset_config_mcp.json
+```
 
-- **GPU8**: `/data/ylivm/ngdb_benchmark/data_gen/perturbed_dataset`
-- **Perturbation Records**: `/data/ylivm/ngdb_benchmark/data_gen/perturb_record`
+For MCP datasets, use this command to backfill `mention_in_nodes` from KG extraction files:
 
+```bash
+uv run python -m pipeline.dataset_constructor.cli mcp-mentions \
+  --input INPUT.json \
+  --output OUTPUT.json \
+  --kg-extraction-dir PATH_TO_KG_EXTRACTION_FILES
+```
+
+## Output Conventions
+
+- Clean and perturbed graphs: `data_gen/graph_gen/graph_buffer/`
+- Perturbation records: `data_gen/perturbation_generator/perturb_record/`
+- Query generation results: usually `pipeline/query_gen/` or `pipeline/query_gen/query/`
+- Final datasets: recommended location is `pipeline/query_gen/query/final/<dataset>/`
+
+The released dataset can be downloaded directly from Hugging Face. This repository is mainly for reproducing or extending the data generation pipeline.
+
+## Development And Validation
+
+Run the dataset constructor tests:
+
+```bash
+uv run python -m unittest tests.test_dataset_constructor
+```
+
+The old top-level benchmark compatibility layer has been removed:
+
+- `run_example.py`
+- `ngdb_framework.py`
+- `tests/test_basic_functionality.py`
+
+Those files only served the early demo benchmark and are not part of the current data and query generation workflow.
