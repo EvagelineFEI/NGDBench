@@ -2,6 +2,7 @@ from generator.manage_generator import ManageGenerator
 from pathlib import Path
 import sys
 import argparse
+import os
 
 # 添加 pipeline 目录到路径，以便导入 db_builder
 # management_test.py 在 pipeline/query_gen/，需要向上2级到 pipeline
@@ -60,8 +61,8 @@ parser.add_argument(
 )
 parser.add_argument(
     "--neo4j-password",
-    default="fei123456",
-    help="Neo4j 密码（默认：fei123456）"
+    default=os.getenv("NEO4J_PASSWORD", "YOUR_NEO4J_PASSWORD"),
+    help="Neo4j 密码（默认读取 NEO4J_PASSWORD 环境变量）"
 )
 parser.add_argument(
     "--dataset",

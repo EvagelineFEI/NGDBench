@@ -4,7 +4,7 @@ set -euo pipefail
 # 参数（可通过环境变量传入）
 SF=${SF:-1}
 LDBC_SNB_DATAGEN_MAX_MEM=${LDBC_SNB_DATAGEN_MAX_MEM:-16g}
-BASE_DIR=${BASE_DIR:-/home/ylivm/ngdb}
+BASE_DIR=${BASE_DIR:-"${PWD}/.ldbc"}
 SPARK_HOME=${SPARK_HOME:-"${HOME}/spark-3.2.2-bin-hadoop3.2"}
 NEO4J_PAGECACHE=${NEO4J_PAGECACHE:-20G}
 NEO4J_HEAP_MAX=${NEO4J_HEAP_MAX:-20G}
@@ -74,4 +74,3 @@ else
 fi
 
 echo "ldbc_snb_bi 数据生成与装载完成 (SF=${SF})."
-

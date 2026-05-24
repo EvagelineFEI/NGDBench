@@ -1,10 +1,21 @@
 from dataload_toolkit import build_graph_from_data_ldbcbi, load_graph, save_graph
+import os
 import random
 from pathlib import Path
 # from ..data_analyser.graph_handler import GraphInspector 
 if __name__ == "__main__":
     # LDBC SNB FinBench 数据
-    data_path = "/home/ylivm/ngdb/ngdb_benchmark/data_gen/gnd_dataset/ldbc_snb_bi/out-sf1/csv/bi/composite-projected-fk/initial_snapshot"
+    default_data_path = (
+        Path(__file__).resolve().parents[1]
+        / "gnd_dataset"
+        / "ldbc_snb_bi"
+        / "out-sf1"
+        / "csv"
+        / "bi"
+        / "composite-projected-fk"
+        / "initial_snapshot"
+    )
+    data_path = os.getenv("LDBC_SNB_BI_DATA_PATH", str(default_data_path))
     graph_name = "ldbc_snb_bi"
     file_format = ".csv.gz"
     graph_path = Path(f"graph_buffer/{graph_name}.gpickle")

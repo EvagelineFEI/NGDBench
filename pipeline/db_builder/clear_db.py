@@ -3,6 +3,8 @@
 用法: python clear_db.py
 """
 
+import os
+
 try:
     from .build_base import Neo4jGraphBuilder
 except ImportError:  # pragma: no cover - direct script execution
@@ -10,7 +12,7 @@ except ImportError:  # pragma: no cover - direct script execution
 
 NEO4J_URI = "bolt://localhost:7691"
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "fei123456"
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "YOUR_NEO4J_PASSWORD")
 
 
 def main() -> None:

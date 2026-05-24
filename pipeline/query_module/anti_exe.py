@@ -43,7 +43,7 @@ def main():
     # Docker容器映射端口 7692 -> 7687，所以使用 localhost:7692
     uri = "bolt://localhost:7692"
     user = "neo4j"
-    password = "fei123456"
+    password = os.getenv("NEO4J_PASSWORD", "YOUR_NEO4J_PASSWORD")
     
     # 输入和输出文件路径
     input_json_file = "../query_gen/query/ldbc_snb_finbench/query_results_ldbcfin_with_orderby.json"

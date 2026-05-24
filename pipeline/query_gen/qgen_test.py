@@ -1,6 +1,7 @@
 import json
 import argparse
 import logging
+import os
 from generator.query_generator import QueryGenerator
 
 logger = logging.getLogger(__name__)
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 # 默认连接配置（可被命令行参数覆盖）
 DEFAULT_NEO4J_URI = "bolt://localhost:7689"
 DEFAULT_NEO4J_USER = "neo4j"
-DEFAULT_NEO4J_PASSWORD = "fei123456"
+DEFAULT_NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "YOUR_NEO4J_PASSWORD")
 DEFAULT_DATASET = "primekg"
 DEFAULT_TEMPLATE_PATH = "query_template/template_agg.json"
 

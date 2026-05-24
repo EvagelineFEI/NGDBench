@@ -17,7 +17,7 @@ NGDB Benchmark is used to generate graph data, create perturbed graphs, load gra
 This project uses `uv` for Python environment management:
 
 ```bash
-cd /home/ylivm/ngdb/ngdb_benchmark
+cd ngdb_benchmark
 uv sync
 ```
 
@@ -94,7 +94,7 @@ The structured query generation entry point is `pipeline/query_gen/qgen_test.py`
 ```bash
 cd pipeline/query_gen
 uv run python qgen_test.py \
-  --uri bolt://localhost:7689 \
+  --uri bolt://<neo4j-host>:<bolt-port> \
   --user neo4j \
   --password YOUR_PASSWORD \
   --dataset primekg \
@@ -132,7 +132,7 @@ uv run python -m pipeline.dataset_constructor.cli build \
   --kind structured \
   --input pipeline/query_gen/query_results_primekg.json \
   --output pipeline/query_gen/query/final/primekg/complex_query_agg.json \
-  --neo4j-uri bolt://localhost:7689 \
+  --neo4j-uri bolt://<neo4j-host>:<bolt-port> \
   --neo4j-user neo4j \
   --neo4j-password YOUR_PASSWORD \
   --api-key YOUR_API_KEY \
@@ -161,7 +161,7 @@ uv run python -m pipeline.dataset_constructor.cli build \
   --kind unstructured \
   --input INPUT.json \
   --output OUTPUT.json \
-  --neo4j-uri bolt://localhost:7689 \
+  --neo4j-uri bolt://<neo4j-host>:<bolt-port> \
   --neo4j-user neo4j \
   --neo4j-password YOUR_PASSWORD \
   --api-key YOUR_API_KEY \

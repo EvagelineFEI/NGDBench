@@ -163,8 +163,8 @@ def main():
     parser.add_argument("--input", "-i", default="mcp_query_gnd_gpt5.json", help="输入 JSON 文件路径")
     parser.add_argument("--output", "-o", default=None, help="输出 JSON 文件路径（默认与输入同目录，文件名加 _nlp 后缀）")
     parser.add_argument("--model", "-m", default="qwen2.5-7b-instruct", help="使用的模型")
-    parser.add_argument("--api-key", default="sk-edc6c171ed524d059e3053b33ea96705", help="OpenAI API Key（也可用环境变量 OPENAI_API_KEY）")
-    parser.add_argument("--base-url", default="https://dashscope.aliyuncs.com/compatible-mode/v1", help="API 基础 URL（可选）")
+    parser.add_argument("--api-key", default=None, help="OpenAI API Key（也可用环境变量 OPENAI_API_KEY）")
+    parser.add_argument("--base-url", default=None, help="API 基础 URL（可选，也可用环境变量 OPENAI_BASE_URL）")
     args = parser.parse_args()
 
     input_path = os.path.join(os.path.dirname(__file__), args.input) if not os.path.isabs(args.input) else args.input
@@ -178,7 +178,7 @@ def main():
         input_file=input_path,
         output_file=output_path,
         api_key=args.api_key,
-        base_url=args.base_url,
+        base_url=args.base_url or os.getenv("OPENAI_BASE_URL"),
         model=args.model,
     )
 

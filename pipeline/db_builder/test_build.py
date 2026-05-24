@@ -5,10 +5,11 @@
 docker run -d \
   --name neo4j-520 \
   -p 7689:7687 \
-  -e NEO4J_AUTH=neo4j/fei123456 \
+  -e NEO4J_AUTH=neo4j/YOUR_NEO4J_PASSWORD \
   neo4j:5.20.0
 """
 
+import os
 from pathlib import Path
 
 try:
@@ -19,7 +20,7 @@ except ImportError:  # pragma: no cover - direct script execution
 
 NEO4J_URI = "bolt://localhost:7692"
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "fei123456"
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "YOUR_NEO4J_PASSWORD")
 
 # 项目根目录为 `ngdb_benchmark`，本文件位于 `ngdb_benchmark/pipeline/db_builder/`
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

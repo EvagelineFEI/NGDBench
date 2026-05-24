@@ -376,12 +376,12 @@ if __name__ == "__main__":
     
     
     # api_key_arg: str = ""
-    # base_url_arg: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    # base_url_arg: str = "https://<openai-compatible-host>/v1"
     # model_arg: str = "qwen3-max-2026-01-23"   #"deepseek-v3.2"        #"qwen3-max-2026-01-23"
     # dataset_arg: str = "mcp"
 
     api_key_arg: str = ""
-    base_url_arg: str = "https://api.poe.com/v1"
+    base_url_arg: str = os.getenv("OPENAI_BASE_URL", "")
     model_arg: str = "gpt-5"   # "gemini-3-pro"
     dataset_arg: str = "mcp"
     mode_arg: str = "v2"       # 默认走 v2：使用 nlp + mention_in_nodes
@@ -429,4 +429,3 @@ if __name__ == "__main__":
             model=model_arg,
             dataset=dataset_arg,
         )
-

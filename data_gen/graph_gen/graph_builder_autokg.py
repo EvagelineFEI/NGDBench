@@ -5,8 +5,8 @@ from dataload_clean import *
 import random
 
 if __name__ == "__main__":
-    # csv_path = "/home/ylivm/fei_work/NGDB_Benchmark/data_gen/perturbed_dataset/PrimeKG_2512260650/kg_test.csv"
-    # save_path = "/home/ylivm/fei_work/NGDB_Benchmark/pipeline/data_analyser/buffer/Primekg_noise.gpickle"
+    # csv_path = "data_gen/perturbed_dataset/PrimeKG_<timestamp>/kg_test.csv"
+    # save_path = "data_gen/data_analyser/buffer/Primekg_noise.gpickle"
     # graph = build_graph_from_kg_csv(csv_path, save_path)
     # convert_to_gpickle("agent_memory1", "agent_memory1", include_concept=False)
     # graph = load_graph(save_path)

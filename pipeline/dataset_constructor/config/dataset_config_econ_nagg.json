@@ -1,6 +1,6 @@
 {
   "system": "This dataset comes from an economics and finance document knowledge-graph benchmark.",
-  "data_file": "/home/ylivm/ngdb/ngdb_benchmark/pipeline/query_gen/query/final/econ/econ_nagg_mention_in_results.json",
+  "data_file": "pipeline/query_gen/query/final/econ/econ_nagg_mention_in_results.json",
   "dataset_description": "The file contains non-aggregation Cypher query results over an economics knowledge graph. Each record pairs a graph query with returned entity/event ids and supporting text snippets from source documents.",
   "record_fields": {
     "template_id": "Identifier of the query template instance.",

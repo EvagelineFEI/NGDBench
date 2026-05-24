@@ -5,12 +5,13 @@
 """
 import json
 import argparse
+import os
 from pathlib import Path
 
 # 与 qgen_test.py 保持一致
 DEFAULT_NEO4J_URI = "bolt://localhost:7690"
 DEFAULT_NEO4J_USER = "neo4j"
-DEFAULT_NEO4J_PASSWORD = "fei123456"
+DEFAULT_NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "YOUR_NEO4J_PASSWORD")
 DEFAULT_OUTPUT = "nodes_sample_50.json"
 DEFAULT_LIMIT = 50
 

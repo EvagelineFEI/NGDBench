@@ -1,6 +1,6 @@
 {
   "generator": "get_noise_query.py",
-  "source_perturb_record": "/home/ylivm/ngdb/ngdb_benchmark/data_gen/perturbation_generator/perturb_record/semantic_SemanticPerturbationGenerator_primekg_20251202_211407.json",
+  "source_perturb_record": "data_gen/perturbation_generator/perturb_record/semantic_SemanticPerturbationGenerator_primekg_20251202_211407.json",
   "total_queries": 18,
   "queries": [
     {

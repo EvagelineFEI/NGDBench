@@ -6,11 +6,12 @@
 """
 import json
 import argparse
+import os
 from pathlib import Path
 
 DEFAULT_NEO4J_URI = "bolt://localhost:7690"
 DEFAULT_NEO4J_USER = "neo4j"
-DEFAULT_NEO4J_PASSWORD = "fei123456"
+DEFAULT_NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "YOUR_NEO4J_PASSWORD")
 DEFAULT_OUTPUT = "mention_in_target_nodes.json"
 
 

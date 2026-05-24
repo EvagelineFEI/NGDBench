@@ -488,8 +488,8 @@ if __name__ == "__main__":
     import sys
     
     # 解析命令行参数，支持 --api-key 和 --base-url
-    api_key = ""
-    base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    api_key = os.getenv("OPENAI_API_KEY", "")
+    base_url = os.getenv("OPENAI_BASE_URL")
     model = "qwen2.5-7b-instruct"
     
     # 检查是否有 --api-key 参数

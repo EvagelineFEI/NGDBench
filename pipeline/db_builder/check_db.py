@@ -3,11 +3,13 @@
 用法: python check_db.py  或  python -m db_builder.check_db
 """
 
+import os
+
 from neo4j import GraphDatabase
 
 NEO4J_URI = "bolt://localhost:7691"
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "fei123456"
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "YOUR_NEO4J_PASSWORD")
 
 
 def main() -> None:

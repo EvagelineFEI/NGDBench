@@ -28,7 +28,7 @@ def load_graph(path: str) -> nx.MultiDiGraph:
         raise ValueError(f"Unsupported file type: {suffix}. Only .gpickle and .graphml are supported.")
     return g
 if __name__ == "__main__":
-    # csv_path = "/home/ylivm/fei_work/NGDB_Benchmark/data_gen/perturbed_dataset/PrimeKG_2512260650/kg_test.csv"
+    # csv_path = "../perturbed_dataset/PrimeKG_<timestamp>/kg_test.csv"
     # ngdb_benchmark/data_gen/graph_gen/graph_buffer/multi_financial_graph_concepts_aligned.gpickle
     save_path = "../graph_gen/graph_buffer/multi_financial_graph_concepts_aligned.gpickle"
     output_path = "buffer/multi_financial.txt"
