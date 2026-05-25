@@ -977,7 +977,7 @@
     "perturbed_data_path": "perturbed_dataset/ldbc_snb_bi_2510280002/out-sf1/graphs/csv/bi/composite-projected-fk/initial_snapshot",
     "log_info": {
       "generator_index": "1/1",
-      "record_path": "/home/ylivm/ngdb/ngdb_benchmark/data_gen/../perturb_record/random_RandomPerturbationGenerator_20251028_000231.json",
+      "record_path": "data_gen/perturbation_generator/perturb_record/random_RandomPerturbationGenerator_20251028_000231.json",
       "method": "random_incomplete",
       "operation_count": 108,
       "perturbed_data_path": "perturbed_dataset/ldbc_snb_bi_2510280002/out-sf1/graphs/csv/bi/composite-projected-fk/initial_snapshot"

@@ -1,6 +1,6 @@
-# NGDB Benchmark
+# NGDBench
 
-NGDB Benchmark is used to generate graph data, create perturbed graphs, load graphs into Neo4j, generate Cypher queries, and assemble the final natural-language QA datasets.
+NGDBench is used to generate graph data, create perturbed graphs, load graphs into Neo4j, generate Cypher queries, and assemble the final natural-language QA datasets.
 
 
 ## Repository Layout
